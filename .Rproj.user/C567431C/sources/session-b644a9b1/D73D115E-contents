@@ -1,28 +1,41 @@
-# Функция для скачивания файлов
+#' @export
+download_dbip_rvest_clean_v2 <- function() {
 
-download_dbip <- function() {
+  # Подключаем библиотеку
+  library(rvest)
 
-  if (!dir.exists("data-raw/source")) {
-    dir.create("data-raw/source", recursive = TRUE)
+  # Создаём папку для загрузок
+  dir.create("data-raw/source", showWarnings = FALSE, recursive = TRUE)
+
+  # 1. Функция для парсинга и очистки ссылки
+  get_clean_url <- function(page_url, pattern) {
+
+    page <- read_html(page_url)
+
+    all_links <- page %>% html_nodes("a") %>% html_attr("href")
+    print(head(all_links, 5))
+    target_link <- grep(pattern, all_links, value = TRUE)[1]
+    clean_url <- sub("(.*\\.gz).*", "\\1", url)
+    return(clean_url)
   }
 
-  geo_url <- "https://download.db-ip.com/free/dbip-city-lite-2025-12.csv.gz"
-  asn_url <- "https://download.db-ip.com/free/dbip-asn-lite-2025-12.csv.gz"
+  # 2. Получаем чистые URL для двух файлов
+  city_url <- get_clean_url("https://db-ip.com/db/download/ip-to-city-lite",
+                            pattern = "dbip-city-lite")
+  asn_url <- get_clean_url("https://db-ip.com/db/download/ip-to-asn-lite",
+                           pattern = "dbip-asn-lite")
 
-  geo_file <- "data-raw/source/geo.csv.gz"
-  asn_file <- "data-raw/source/asn.csv.gz"
-
-  download.file(geo_url, geo_file, mode = "wb")
-
-  download.file(asn_url, asn_file, mode = "wb")
-
-  if (file.exists(geo_file) && file.exists(asn_file)) {
-    message("  Оба файла скачаны")
-    message("  Геолокация: ", geo_file)
-    message("  ASN:        ", asn_file)
-  } else {
-    warning("Что-то пошло не так")
+  # 3. Проверяем успешность
+  if (is.na(city_url) || is.na(asn_url)) {
+    stop("Не удалось извлечь одну или обе ссылки.")
   }
 
-  return(c(geo = geo_file, asn = asn_file))
+  # 4. Задаём пути для сохранения и скачиваем
+  message("Скачиваю файл с геолокацией...")
+  download.file(city_url, "data-raw/source/geo.csv.gz", mode = "wb")
+  message("Скачиваю файл с ASN...")
+  download.file(asn_url, "data-raw/source/asn.csv.gz", mode = "wb")
+
+  message("✅ Оба файла успешно скачаны!")
+  return(c(geo = "data-raw/source/geo.csv.gz", asn = "data-raw/source/asn.csv.gz"))
 }
