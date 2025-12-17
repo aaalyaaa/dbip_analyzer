@@ -1,0 +1,12 @@
+# Данные и исходные файлы
+data-raw/source/
+processed/
+*.csv
+*.csv.gz
+*.parquet
+*.rds
+
+# R временные файлы
+.Rhistory
+.RData
+.Rproj.user

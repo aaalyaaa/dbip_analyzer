@@ -1,0 +1,28 @@
+# Функция для скачивания файлов
+
+download_dbip <- function() {
+
+  if (!dir.exists("data-raw/source")) {
+    dir.create("data-raw/source", recursive = TRUE)
+  }
+
+  geo_url <- "https://download.db-ip.com/free/dbip-city-lite-2025-12.csv.gz"
+  asn_url <- "https://download.db-ip.com/free/dbip-asn-lite-2025-12.csv.gz"
+
+  geo_file <- "data-raw/source/geo.csv.gz"
+  asn_file <- "data-raw/source/asn.csv.gz"
+
+  download.file(geo_url, geo_file, mode = "wb")
+
+  download.file(asn_url, asn_file, mode = "wb")
+
+  if (file.exists(geo_file) && file.exists(asn_file)) {
+    message("  Оба файла скачаны")
+    message("  Геолокация: ", geo_file)
+    message("  ASN:        ", asn_file)
+  } else {
+    warning("Что-то пошло не так")
+  }
+
+  return(c(geo = geo_file, asn = asn_file))
+}
