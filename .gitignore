@@ -1,0 +1,10 @@
+data-raw/source/
+processed/
+*.csv
+*.csv.gz
+*.parquet
+*.rds
+
+.Rhistory
+.RData
+.Rproj.user
