@@ -5,6 +5,25 @@ processed/
 *.parquet
 *.rds
 
+.quarto/
+*/.quarto/
+
 .Rhistory
 .RData
-.Rproj.user
+.Ruserdata
+.Rproj.user/
+
+*.csv
+*.csv.gz
+*.rds
+*.RData
+
+.DS_Store
+Thumbs.db
+
+*~
+*.bak
+*.swp
+
+*.pdf
+*.Rcheck/
