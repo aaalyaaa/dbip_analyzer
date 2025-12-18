@@ -1,0 +1,39 @@
+---
+title: "DB-IP Анализатор"
+format: html
+---
+
+```{r}
+#| include: false
+library(dplyr)
+library(arrow)
+library(leaflet)
+library(ggplot2)
+library(DT)
+
+source("R/utils.R")
+data <- load_processed_data()
+ip_map <- create_ip_map(data)
+country_chart <- create_country_chart(data)
+data_table <- create_data_table(data, n = 100)
+```
+
+#Данные
+```{r}
+data_table
+```
+# Статистика
+```{r}
+get_data_stats(data)
+```
+# Карта IP адресов
+```{r}
+ip_map
+```
+
+# Топ стран по IP-адресам
+```{r}
+country_chart
+```
+
+

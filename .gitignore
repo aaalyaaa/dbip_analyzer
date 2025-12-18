@@ -1,3 +1,13 @@
+# RStudio
+.Rproj.user/
+*.Rproj
+
+# R temporary files
+.Rhistory
+.RData
+.Ruserdata
+
+# Data files
 data-raw/source/
 processed/
 *.csv
@@ -5,25 +15,20 @@ processed/
 *.parquet
 *.rds
 
+# Quarto
 .quarto/
 */.quarto/
 
-.Rhistory
-.RData
-.Ruserdata
-.Rproj.user/
+# Package builds
+*.tar.gz
+*.pdf
+*.Rcheck/
 
-*.csv
-*.csv.gz
-*.rds
-*.RData
-
+# System files
 .DS_Store
 Thumbs.db
 
+# Temporary files
 *~
 *.bak
 *.swp
-
-*.pdf
-*.Rcheck/
