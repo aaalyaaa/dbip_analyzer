@@ -13,7 +13,6 @@ process_dbip <- function(files, output_dir = "processed") {
   options(warn = -1)
   on.exit(options(warn = 0))
 
-  # 1. Чтение данных
   geo <- data.table::fread(
     files["geo"],
     header = FALSE,
@@ -27,7 +26,6 @@ process_dbip <- function(files, output_dir = "processed") {
     col.names = c("ip_start", "ip_end", "as_number", "as_organization")
   )
 
-  # 2. Функция преобразования IP в число
   ip_to_int <- function(ip_vector) {
     is_valid <- grepl("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$", ip_vector)
     result <- rep(NA_integer_, length(ip_vector))
@@ -43,20 +41,17 @@ process_dbip <- function(files, output_dir = "processed") {
     return(result)
   }
 
-  # 3. Преобразование IP в числа
   geo[, `:=`(start_num = ip_to_int(ip_start),
              end_num = ip_to_int(ip_end))]
 
   asn[, `:=`(asn_start = ip_to_int(ip_start),
              asn_end = ip_to_int(ip_end))]
 
-  # 4. Фильтрация
   geo_clean <- geo[!is.na(start_num) & !is.na(end_num) &
                      !is.na(latitude) & !is.na(longitude)]
 
   asn_clean <- asn[!is.na(asn_start) & !is.na(asn_end)]
 
-  # 5. Объединение
   setkey(asn_clean, asn_start, asn_end)
 
   result <- asn_clean[geo_clean,
@@ -74,7 +69,6 @@ process_dbip <- function(files, output_dir = "processed") {
                       mult = "first"
   ]
 
-  # 6. Очистка данных
   result[, `:=`(
     as_number = as.character(as_number),
     state = data.table::fifelse(state == "", NA_character_, trimws(state)),
