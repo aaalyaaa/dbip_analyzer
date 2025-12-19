@@ -18,5 +18,8 @@ Imports:
     rvest,
     dplyr,
     data.table,
-    R.utils
+    R.utils,
+    leaflet,
+    ggplot2,
+    DT
 RoxygenNote: 7.3.3
