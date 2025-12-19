@@ -37,20 +37,40 @@ make_dashboard <- function() {
     setwd(old_wd)
   })
 
-  temp_html <- file.path(temp_quarto, "docs", "index.html")
-  if (file.exists(temp_html)) {
+
+  temp_html_paths <- c(
+    file.path(temp_quarto, "docs", "index.html"),
+    file.path(temp_quarto, "docs/index.html"),
+    file.path(temp_quarto, "docs\\index.html")  # Для Windows
+  )
+
+  temp_html <- NULL
+  for (path in temp_html_paths) {
+    if (file.exists(path)) {
+      temp_html <- path
+      break
+    }
+  }
+
+  if (!is.null(temp_html) && file.exists(temp_html)) {
     if (!dir.exists("docs")) dir.create("docs", recursive = TRUE)
 
+
     final_html_path <- file.path(user_dir, "docs", "index.html")
+
 
     file.copy(temp_html, final_html_path, overwrite = TRUE)
 
     cat("✅ Dashboard created\n")
     cat("📄 Full path to report:", normalizePath(final_html_path), "\n")
   } else {
+
+    cat("Debug info:\n")
+    cat("Temp directory:", temp_quarto, "\n")
+    cat("Listing files in temp_quarto:\n")
+    print(list.files(temp_quarto, recursive = TRUE))
     stop("Failed to create dashboard: HTML file not found in temp directory")
   }
-
 
   invisible(final_html_path)
 }
