@@ -3,44 +3,76 @@
 #' @return Loaded dataframe with data
 #' @noRd
 
+
 make_dashboard <- function() {
   user_dir <- getwd()
-  cat("user dir", user_dir, "\n")
-
   user_data_path <- file.path(user_dir, "processed", "dbip_data.parquet")
-  if (!file.exists(user_data_path)) {
-    stop("data not found: ", user_data_path, "\n Run: run_etl()")
-  }
 
-  cat("user data:", normalizePath(user_data_path), "\n")
+  cat("user directory:", user_dir, "\n")
+  cat("check user data:", user_data_path, "\n")
+
+  if (!file.exists(user_data_path)) {
+    stop(
+      "data file not found\n",
+      "   ", user_data_path, "\n\n",
+      "To fix:\n",
+      "   1. Run: run_etl()\n",
+      "   2. Or place dbip_data.parquet in processed/ folder"
+    )
+  }
+  cat("✅ User data found\n")
 
   quarto_path <- system.file("quarto", package = "dbipAnalyzer")
-  if (quarto_path == "") stop("Package not installed")
+
+  temp_dir <- tempfile("dashboard_")
+  dir.create(temp_dir)
+  file.copy(quarto_path, temp_dir, recursive = TRUE)
+
+  temp_quarto <- file.path(temp_dir, "quarto")
+  cat("quarto copied to:", temp_quarto, "\n")
+
+  file.copy(user_data_path, file.path(temp_quarto, "dbip_data.parquet"))
+  cat("data copied to Quarto project\n")
+
+
+  cat("rendering dashboard...\n")
 
   old_wd <- getwd()
-  on.exit(setwd(old_wd))
+  setwd(temp_quarto)
 
-  setwd(user_dir)
-  cat("working in:", getwd(), "\n")
+  tryCatch({
+    quarto::quarto_render(
+      input = ".",
+      quiet = FALSE
+    )
+  }, finally = {
+    setwd(old_wd)
+  })
 
-  if (!dir.exists("docs")) {
-    dir.create("docs")
-  }
+  temp_docs <- file.path(temp_quarto, "docs")
+  user_docs <- file.path(user_dir, "docs")
+
+  if (dir.exists(temp_docs)) {
+    if (!dir.exists(user_docs)) {
+      dir.create(user_docs, recursive = TRUE)
+    }
+
+    files_to_copy <- list.files(temp_docs, full.names = TRUE)
+    for (file in files_to_copy) {
+      file.copy(file, user_docs, recursive = TRUE, overwrite = TRUE)
+    }
+
+    cat("dashboard", user_docs, "\n")
 
 
-  cat("Rendering dashboard from user directory...\n")
-  quarto::quarto_render(
-    input = quarto_path,
-    output_dir = "docs",
-    quiet = FALSE
-  )
+    return(invisible(file.path(user_docs, "index.html")))
 
-  if (file.exists("docs/index.html")) {
-    cat("created: docs/index.html\n")
   } else {
-    cat("HTML error\n")
+    cat("No docs/ folder created by Quarto\n")
+    return(invisible(NULL))
   }
 }
+
 
 #' Get basic statistics about the data
 #' @description Calculates basic statistics for the DB-IP dataframe
