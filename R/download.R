@@ -34,10 +34,10 @@ download_dbip <- function() {
                            pattern = "dbip-asn-lite")
 
   message("Скачивание файла с геолокацией")
-  utils::download.file(city_url, "data-raw/source/geo.csv.gz", mode = "wb")
+  utils::download.file(city_url, "data-raw/source/geo.csv.gz", mode = "wb", timeout = 460)
 
   message("Скачивание файла с ASN")
-  utils::download.file(asn_url, "data-raw/source/asn.csv.gz", mode = "wb")
+  utils::download.file(asn_url, "data-raw/source/asn.csv.gz", mode = "wb", timeout = 460)
 
   message("Файлы успешно скачаны")
 
