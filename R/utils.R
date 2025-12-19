@@ -3,47 +3,43 @@
 #' @return Loaded dataframe with data
 #' @noRd
 
-load_processed_data <- function() {
-  cat("DEBUG: load_processed_data() called from:", getwd(), "\n")
+make_dashboard <- function() {
+  user_dir <- getwd()
+  cat("user dir", user_dir, "\n")
 
-  possible_paths <- c(
-    "dbip_data.parquet",
-    "processed/dbip_data.parquet",
-    file.path(getwd(), "dbip_data.parquet")
+  user_data_path <- file.path(user_dir, "processed", "dbip_data.parquet")
+  if (!file.exists(user_data_path)) {
+    stop("data not found: ", user_data_path, "\n Run: run_etl()")
+  }
+
+  cat("user data:", normalizePath(user_data_path), "\n")
+
+  quarto_path <- system.file("quarto", package = "dbipAnalyzer")
+  if (quarto_path == "") stop("Package not installed")
+
+  old_wd <- getwd()
+  on.exit(setwd(old_wd))
+
+  setwd(user_dir)
+  cat("working in:", getwd(), "\n")
+
+  if (!dir.exists("docs")) {
+    dir.create("docs")
+  }
+
+
+  cat("Rendering dashboard from user directory...\n")
+  quarto::quarto_render(
+    input = quarto_path,
+    output_dir = "docs",
+    quiet = FALSE
   )
 
-  cat("🔍 DEBUG: Checking paths:\n")
-  for (path in possible_paths) {
-    exists <- file.exists(path)
-    cat("  ", path, "->", ifelse(exists, "exists", "missing"), "\n")
-    if (exists) {
-      data_path <- path
-      cat("SELECTED:", path, "\n")
-    }
+  if (file.exists("docs/index.html")) {
+    cat("created: docs/index.html\n")
+  } else {
+    cat("HTML error\n")
   }
-
-  if (!exists("data_path", inherits = FALSE) || is.null(data_path)) {
-    cat("\n ERROR: No data file found\n")
-    cat("Files in current directory:\n")
-    print(list.files())
-
-    if (dir.exists("processed")) {
-      cat(" Files in processed/:\n")
-      print(list.files("processed/"))
-    }
-
-    stop(
-      "Data file 'dbip_data.parquet' not found.\n",
-      "Run: run_etl_pipeline()\n",
-      "Or place file in: ", getwd()
-    )
-  }
-
-  cat("Loading:", data_path, "\n")
-  data <- arrow::read_parquet(data_path)
-  cat("uccess! Loaded", nrow(data), "rows\n")
-
-  return(data)
 }
 
 #' Get basic statistics about the data
