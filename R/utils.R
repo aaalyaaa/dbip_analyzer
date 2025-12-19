@@ -4,26 +4,45 @@
 #' @noRd
 
 load_processed_data <- function() {
+  cat("DEBUG: load_processed_data() called from:", getwd(), "\n")
+
   possible_paths <- c(
     "dbip_data.parquet",
     "processed/dbip_data.parquet",
     file.path(getwd(), "dbip_data.parquet")
   )
 
-  data_path <- NULL
+  cat("🔍 DEBUG: Checking paths:\n")
   for (path in possible_paths) {
-    if (file.exists(path)) {
+    exists <- file.exists(path)
+    cat("  ", path, "->", ifelse(exists, "exists", "missing"), "\n")
+    if (exists) {
       data_path <- path
-      break
-    }}
+      cat("SELECTED:", path, "\n")
+    }
+  }
 
-  if (is.null(data_path)) {
-    stop("Error. File dbip_data.parquet not found",
-      "   First run: run_etl\n",
-      "   Or place the file in current directory"
-    )}
+  if (!exists("data_path", inherits = FALSE) || is.null(data_path)) {
+    cat("\n ERROR: No data file found\n")
+    cat("Files in current directory:\n")
+    print(list.files())
 
+    if (dir.exists("processed")) {
+      cat(" Files in processed/:\n")
+      print(list.files("processed/"))
+    }
+
+    stop(
+      "Data file 'dbip_data.parquet' not found.\n",
+      "Run: run_etl_pipeline()\n",
+      "Or place file in: ", getwd()
+    )
+  }
+
+  cat("Loading:", data_path, "\n")
   data <- arrow::read_parquet(data_path)
+  cat("uccess! Loaded", nrow(data), "rows\n")
+
   return(data)
 }
 
