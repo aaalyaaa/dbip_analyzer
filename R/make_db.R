@@ -23,12 +23,10 @@ make_dashboard <- function() {
 
   temp_quarto <- file.path(temp_dir, "quarto")
 
-
   file.copy(user_data_path, file.path(temp_quarto, "dbip_data.parquet"))
   temp_processed <- file.path(temp_quarto, "processed")
   if (!dir.exists(temp_processed)) dir.create(temp_processed)
   file.copy(user_data_path, file.path(temp_processed, "dbip_data.parquet"))
-
 
   old_wd <- getwd()
   setwd(temp_quarto)
@@ -39,11 +37,20 @@ make_dashboard <- function() {
     setwd(old_wd)
   })
 
-
   temp_html <- file.path(temp_quarto, "docs", "index.html")
   if (file.exists(temp_html)) {
-    if (!dir.exists("docs")) dir.create("docs")
-    file.copy(temp_html, "docs/index.html", overwrite = TRUE)
+    if (!dir.exists("docs")) dir.create("docs", recursive = TRUE)
+
+    final_html_path <- file.path(user_dir, "docs", "index.html")
+
+    file.copy(temp_html, final_html_path, overwrite = TRUE)
+
     cat("✅ Dashboard created\n")
+    cat("📄 Full path to report:", normalizePath(final_html_path), "\n")
+  } else {
+    stop("Failed to create dashboard: HTML file not found in temp directory")
   }
+
+
+  invisible(final_html_path)
 }
