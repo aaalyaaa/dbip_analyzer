@@ -4,7 +4,7 @@
 #'
 #' @importFrom dplyr %>%
 #' @return Character vector with paths to downloaded files
-#' @export
+#' @keywords internal
 download_dbip <- function() {
 
   dir.create("data-raw/source", showWarnings = FALSE, recursive = TRUE)

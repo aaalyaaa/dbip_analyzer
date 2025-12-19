@@ -12,3 +12,4 @@ Character vector with paths to downloaded files
 \description{
 This function downloads geolocation and ASN data from DB-IP website.
 }
+\keyword{internal}
