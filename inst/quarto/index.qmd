@@ -1,39 +1,24 @@
 ---
-title: "DB-IP Анализатор"
+title: "DB-IP Data Visualization"
 format: html
 ---
 
 ```{r}
-#| include: false
-library(dplyr)
-library(arrow)
-library(leaflet)
-library(ggplot2)
-library(DT)
+#| echo: false
+source("../../R/utils.R")
 
-source("R/utils.R")
 data <- load_processed_data()
-ip_map <- create_ip_map(data)
-country_chart <- create_country_chart(data)
-data_table <- create_data_table(data, n = 100)
-```
 
-#Данные
-```{r}
+stats <- get_data_stats(data)
+map_data <- head(data, 20)  
+ip_map <- create_ip_map(map_data, 20)
+ip_map
+
+
+as_chart <- create_as_org_chart(data, top_n = 15)
+print(as_chart)
+
+
+data_table <- create_table(data, n = 200)
 data_table
 ```
-# Статистика
-```{r}
-get_data_stats(data)
-```
-# Карта IP адресов
-```{r}
-ip_map
-```
-
-# Топ стран по IP-адресам
-```{r}
-country_chart
-```
-
-
