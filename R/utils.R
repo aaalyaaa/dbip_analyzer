@@ -11,29 +11,11 @@ load_processed_data <- function() {
   cat("User directory:", user_dir, "\n")
   cat("Looking for:", data_path, "\n")
 
-
   if (!file.exists(data_path)) {
-
-    cat("Files in current directory:\n")
-    print(list.files())
-
-    if (dir.exists("processed")) {
-      cat("\nFiles in processed/:\n")
-      print(list.files("processed/"))
-    }
-
     stop(
-      "❌ Data file not found: ", data_path, "\n",
-      "Run: run_etl_pipeline()\n",
-      "Or place file in processed/ folder"
-    )
-  }
+      "Данные не найдены. Запустите run_etl()")}
 
-
-  cat("✅ Loading data...\n")
   data <- arrow::read_parquet(data_path)
-  cat("✅ Loaded", nrow(data), "rows\n")
-
   return(data)
 }
 
@@ -51,7 +33,6 @@ get_data_stats <- function(data) {
     total_cities = length(unique(data$city)),
     total_as_organizations = length(unique(data$as_organization)))
 
-  cat("Статистика\n")
   cat("Всего строк:", stats_list$total_rows, "\n")
   cat("Уникальных континентов:", stats_list$total_continents, "\n")
   cat("Уникальных стран:", stats_list$total_countries, "\n")
@@ -123,14 +104,14 @@ create_as_org_chart <- function(data, top_n) {
     ggplot2::geom_bar(stat = "identity", fill = "darkgreen") +
     ggplot2::coord_flip() +
     ggplot2::labs(
-      title = paste("Топ-", top_n, "AS организаций по количеству IP-диапазонов", sep = ""),
       x = "AS Организация",
       y = "Количество диапазонов IP"
     ) +
     ggplot2::theme_minimal() +
     ggplot2::theme(
       axis.text.y = ggplot2::element_text(size = 9),
-      plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold")
+      plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold"),
+      plot.margin = ggplot2::margin(1, 3, 1, 1, "cm")
     )
 
   return(p)}
@@ -146,7 +127,6 @@ create_table <- function(data, n) {
   table <- knitr::kable(
     table_data,
     format = "html",
-    caption = "Таблица данных DB-IP",
     align = rep("l", ncol(table_data))
   )
   return(table)
