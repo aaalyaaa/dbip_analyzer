@@ -28,49 +28,51 @@ make_dashboard <- function() {
   if (!dir.exists(temp_processed)) dir.create(temp_processed)
   file.copy(user_data_path, file.path(temp_processed, "dbip_data.parquet"))
 
-  old_wd <- getwd()
-  setwd(temp_quarto)
+  # Создаем директорию docs в рабочей директории пользователя
+  final_docs_dir <- file.path(user_dir, "docs")
+  if (!dir.exists(final_docs_dir)) {
+    dir.create(final_docs_dir, recursive = TRUE)
+  }
 
+  # Определяем полный путь к целевому файлу
+  final_html_path <- file.path(user_dir, "docs", "index.html")
+
+  # Временная копия для отладки
+  cat("🔍 Debug info:\n")
+  cat("User dir:", user_dir, "\n")
+  cat("Final HTML path:", final_html_path, "\n")
+  cat("Temp quarto dir:", temp_quarto, "\n")
+
+  # Выполняем рендеринг с указанием выходного файла
   tryCatch({
-    quarto::quarto_render(".", quiet = FALSE)
-  }, finally = {
-    setwd(old_wd)
+    quarto::quarto_render(
+      input = file.path(temp_quarto, "index.qmd"),
+      output_file = final_html_path,
+      quiet = FALSE
+    )
+    cat("✅ Quarto render completed\n")
+  }, error = function(e) {
+    cat("❌ Quarto render error:", e$message, "\n")
+    stop(e)
   })
 
-
-  temp_html_paths <- c(
-    file.path(temp_quarto, "docs", "index.html"),
-    file.path(temp_quarto, "docs/index.html"),
-    file.path(temp_quarto, "docs\\index.html")  # Для Windows
-  )
-
-  temp_html <- NULL
-  for (path in temp_html_paths) {
-    if (file.exists(path)) {
-      temp_html <- path
-      break
-    }
-  }
-
-  if (!is.null(temp_html) && file.exists(temp_html)) {
-    if (!dir.exists("docs")) dir.create("docs", recursive = TRUE)
-
-
-    final_html_path <- file.path(user_dir, "docs", "index.html")
-
-
-    file.copy(temp_html, final_html_path, overwrite = TRUE)
-
+  # Проверяем, создался ли файл
+  if (file.exists(final_html_path)) {
     cat("✅ Dashboard created\n")
     cat("📄 Full path to report:", normalizePath(final_html_path), "\n")
+
+    # Возвращаем путь невидимо
+    return(invisible(final_html_path))
   } else {
-
-    cat("Debug info:\n")
-    cat("Temp directory:", temp_quarto, "\n")
-    cat("Listing files in temp_quarto:\n")
-    print(list.files(temp_quarto, recursive = TRUE))
-    stop("Failed to create dashboard: HTML file not found in temp directory")
+    # Проверяем, создался ли файл где-то еще
+    temp_html <- file.path(temp_quarto, "docs", "index.html")
+    if (file.exists(temp_html)) {
+      # Копируем из временной директории
+      file.copy(temp_html, final_html_path, overwrite = TRUE)
+      cat("✅ Dashboard created (copied from temp)\n")
+      cat("📄 Full path to report:", normalizePath(final_html_path), "\n")
+      return(invisible(final_html_path))
+    }
+    stop("Failed to create dashboard: HTML file not created")
   }
-
-  invisible(final_html_path)
 }
