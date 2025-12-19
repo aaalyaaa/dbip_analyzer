@@ -49,35 +49,99 @@ get_data_stats <- function(data) {
 
 create_ip_map <- function(data, sample_size) {
 
+  grouped_data <- data |>
+    dplyr::group_by(latitude, longitude) |>
+    dplyr::summarise(
+      count = dplyr::n(),
+      ip_ranges_details = paste(
+        sapply(1:n(), function(i) {
+          paste0(
+            "<div style='margin-bottom: 5px; padding: 3px; background: #f5f5f5; border-radius: 3px;'>",
+            "<b>Диапазон ", i, ":</b><br>",
+            "<span style='color: #333;'>IP Start: ", ip_start[i], "</span><br>",
+            "<span style='color: #333;'>IP End: ", ip_end[i], "</span><br>",
+            "<span style='color: #666; font-size: 0.9em;'>",
+            "Город: ", ifelse(is.na(city[i]), "Н/Д", city[i]), " | ",
+            "ASN: ", ifelse(is.na(as_number[i]), "Н/Д", as_number[i]),
+            "</span>",
+            "</div>"
+          )
+        }), collapse = ""
+      ),
+      cities = paste(unique(na.omit(city)), collapse = ", "),
+      states = paste(unique(na.omit(state)), collapse = ", "),
+      countries = paste(unique(na.omit(country)), collapse = ", "),
+      continents = paste(unique(na.omit(continent)), collapse = ", "),
+      as_numbers = paste(unique(na.omit(as_number)), collapse = ", "),
+      organizations = paste(unique(na.omit(as_organization)), collapse = ", "),
+      all_ip_starts = paste(ip_start, collapse = "|"),
+      all_ip_ends = paste(ip_end, collapse = "|"),
+      .groups = "drop"
+    ) |>
+    dplyr::mutate(
+      cities = ifelse(cities == "", "Н/Д", cities),
+      states = ifelse(states == "", "Н/Д", states),
+      countries = ifelse(countries == "", "Н/Д", countries),
+      continents = ifelse(continents == "", "Н/Д", continents),
+      as_numbers = ifelse(as_numbers == "", "Н/Д", as_numbers),
+      organizations = ifelse(organizations == "", "Н/Д", organizations)
+    )
+
   continent_palette <- leaflet::colorFactor(
     palette = c("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF", "#FFA500"),
-    domain = unique(data$continent)
+    domain = unique(grouped_data$continents)
   )
 
-  map <- leaflet::leaflet(data) |>
+  map <- leaflet::leaflet(grouped_data) |>
     leaflet::addTiles() |>
     leaflet::addCircleMarkers(
       lng = ~longitude,
       lat = ~latitude,
       popup = ~paste(
-        "<b>IP Start:</b>", ip_start, "<br>",
-        "<b>IP End:</b>", ip_end, "<br>",
-        "<b>Город:</b>", ifelse(is.na(city), "Н/Д", city), "<br>",
-        "<b>Регион:</b>", ifelse(is.na(state), "Н/Д", state), "<br>",
-        "<b>Страна:</b>", ifelse(is.na(country), "Н/Д", country), "<br>",
-        "<b>Континент:</b>", ifelse(is.na(continent), "Н/Д", continent), "<br>",
-        "<b>AS Number:</b>", ifelse(is.na(as_number), "Н/Д", as_number), "<br>",
-        "<b>Организация:</b>", ifelse(is.na(as_organization), "Н/Д", as_organization)
+        "<div style='max-height: 400px; overflow-y: auto;'>",
+        "<h4 style='margin-top: 0;'>",
+        ifelse(count > 1, paste("Группа из", count, "IP-диапазонов"), "IP-диапазон"),
+        "</h4>",
+
+        "<div style='margin-bottom: 10px; padding: 8px; background: #e8f4f8; border-radius: 5px;'>",
+        "<b>Общая информация:</b><br>",
+        "<b>Координаты:</b> ", round(latitude, 4), "°, ", round(longitude, 4), "°<br>",
+        "<b>Количество диапазонов:</b> ", count, "<br>",
+        "<b>Города:</b> ", cities, "<br>",
+        "<b>Регионы:</b> ", states, "<br>",
+        "<b>Страны:</b> ", countries, "<br>",
+        "<b>Континенты:</b> ", continents, "<br>",
+        "<b>AS Numbers:</b> ", as_numbers, "<br>",
+        "<b>Организации:</b> ", organizations,
+        "</div>",
+
+        "<hr style='margin: 10px 0;'>",
+        "<h5>Детали IP-диапазонов:</h5>",
+        ip_ranges_details,
+        "</div>"
       ),
-      radius = 5,
-      color = ~continent_palette(continent),
-      fillOpacity = 0.5,
-      clusterOptions = leaflet::markerClusterOptions()
+      radius = ~ifelse(count > 1, 8, 5),
+      color = ~continent_palette(continents),
+      fillOpacity = 0.7,
+      stroke = TRUE,
+      weight = 1,
+      label = ~paste("Координаты:", round(latitude, 4), ",", round(longitude, 4),
+                     " | Диапазонов:", count),
+      labelOptions = leaflet::labelOptions(
+        style = list("font-weight" = "normal", padding = "3px 8px"),
+        textsize = "12px",
+        direction = "auto"
+      ),
+      clusterOptions = leaflet::markerClusterOptions(
+        spiderfyOnMaxZoom = TRUE,
+        showCoverageOnHover = TRUE,
+        zoomToBoundsOnClick = TRUE
+      )
     ) |>
     leaflet::addLegend(
       "bottomright",
       pal = continent_palette,
-      values = ~continent,
+      values = ~continents,
       title = "Континенты",
       opacity = 1
     )
@@ -106,7 +170,7 @@ create_as_org_chart <- function(data, top_n) {
     ggplot2::theme(
       axis.text.y = ggplot2::element_text(size = 9),
       plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold"),
-      plot.margin = ggplot2::margin(1, 4, 1, 1, "cm")
+      plot.margin = ggplot2::margin(1, 1, 1, 1, "cm")
     )+
     ggplot2::scale_y_continuous(
       expand = ggplot2::expansion(mult = c(0, 0.2))
