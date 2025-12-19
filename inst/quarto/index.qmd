@@ -7,10 +7,10 @@ format: html
 #| echo: false
 data <- dbipAnalyzer:::load_processed_data()
 ```
-###Статистика
+### Статистика
 ```{r}
 #| echo: false
-stats <- dbipAnalyzer:::get_data_stats(data)
+stats <-  invisible(dbipAnalyzer:::get_data_stats(data))
 map_data <- head(data, 20)  
 ip_map <- dbipAnalyzer:::create_ip_map(map_data, 20)
 as_chart <- dbipAnalyzer:::create_as_org_chart(data, top_n = 15)
@@ -18,13 +18,16 @@ data_table <- dbipAnalyzer:::create_table(data, n = 200)
 ```
 ### Карта распределения IP - адресов
 ```{r}
+#| echo: false
 ip_map
 ```
 ### AS организаций по количеству IP-диапазонов
 ```{r}
+#| echo: false
 print(as_chart)
 ```
 ### Таблица данных DB-IP
 ```{r}
+#| echo: false
 data_table
 ```

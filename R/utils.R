@@ -8,14 +8,13 @@ load_processed_data <- function() {
   user_dir <- getwd()
   data_path <- file.path(user_dir, "processed", "dbip_data.parquet")
 
-  cat("User directory:", user_dir, "\n")
-  cat("Looking for:", data_path, "\n")
-
   if (!file.exists(data_path)) {
     stop(
       "Данные не найдены. Запустите run_etl()")}
+  data <- suppressMessages({
+    arrow::read_parquet(data_path, quiet = TRUE)
+  })
 
-  data <- arrow::read_parquet(data_path)
   return(data)
 }
 
@@ -75,10 +74,6 @@ create_ip_map <- function(data, sample_size) {
       fillOpacity = 0.5,
       clusterOptions = leaflet::markerClusterOptions()
     ) |>
-    leaflet::addControl(
-      "Карта распределения IP-адресов",
-      position = "topright"
-    ) |>
     leaflet::addLegend(
       "bottomright",
       pal = continent_palette,
@@ -111,7 +106,10 @@ create_as_org_chart <- function(data, top_n) {
     ggplot2::theme(
       axis.text.y = ggplot2::element_text(size = 9),
       plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold"),
-      plot.margin = ggplot2::margin(1, 3, 1, 1, "cm")
+      plot.margin = ggplot2::margin(1, 4, 1, 1, "cm")
+    )+
+    ggplot2::scale_y_continuous(
+      expand = ggplot2::expansion(mult = c(0, 0.2))
     )
 
   return(p)}
