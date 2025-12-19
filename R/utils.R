@@ -10,7 +10,6 @@ load_processed_data <- function() {
   return(data)
 }
 
-# Статистика
 get_data_stats <- function(data) {
   stats_list <- list(
     total_rows = nrow(data),
