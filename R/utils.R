@@ -3,76 +3,39 @@
 #' @return Loaded dataframe with data
 #' @noRd
 
-
 load_processed_data <- function() {
+
   user_dir <- getwd()
-  user_data_path <- file.path(user_dir, "processed", "dbip_data.parquet")
+  data_path <- file.path(user_dir, "processed", "dbip_data.parquet")
 
-  cat("user directory:", user_dir, "\n")
-  cat("check user data:", user_data_path, "\n")
+  cat("User directory:", user_dir, "\n")
+  cat("Looking for:", data_path, "\n")
 
-  if (!file.exists(user_data_path)) {
+
+  if (!file.exists(data_path)) {
+
+    cat("Files in current directory:\n")
+    print(list.files())
+
+    if (dir.exists("processed")) {
+      cat("\nFiles in processed/:\n")
+      print(list.files("processed/"))
+    }
+
     stop(
-      "data file not found\n",
-      "   ", user_data_path, "\n\n",
-      "To fix:\n",
-      "   1. Run: run_etl()\n",
-      "   2. Or place dbip_data.parquet in processed/ folder"
+      "❌ Data file not found: ", data_path, "\n",
+      "Run: run_etl_pipeline()\n",
+      "Or place file in processed/ folder"
     )
   }
-  cat("✅ User data found\n")
-
-  quarto_path <- system.file("quarto", package = "dbipAnalyzer")
-
-  temp_dir <- tempfile("dashboard_")
-  dir.create(temp_dir)
-  file.copy(quarto_path, temp_dir, recursive = TRUE)
-
-  temp_quarto <- file.path(temp_dir, "quarto")
-  cat("quarto copied to:", temp_quarto, "\n")
-
-  file.copy(user_data_path, file.path(temp_quarto, "dbip_data.parquet"))
-  cat("data copied to Quarto project\n")
 
 
-  cat("rendering dashboard...\n")
+  cat("✅ Loading data...\n")
+  data <- arrow::read_parquet(data_path)
+  cat("✅ Loaded", nrow(data), "rows\n")
 
-  old_wd <- getwd()
-  setwd(temp_quarto)
-
-  tryCatch({
-    quarto::quarto_render(
-      input = ".",
-      quiet = FALSE
-    )
-  }, finally = {
-    setwd(old_wd)
-  })
-
-  temp_docs <- file.path(temp_quarto, "docs")
-  user_docs <- file.path(user_dir, "docs")
-
-  if (dir.exists(temp_docs)) {
-    if (!dir.exists(user_docs)) {
-      dir.create(user_docs, recursive = TRUE)
-    }
-
-    files_to_copy <- list.files(temp_docs, full.names = TRUE)
-    for (file in files_to_copy) {
-      file.copy(file, user_docs, recursive = TRUE, overwrite = TRUE)
-    }
-
-    cat("dashboard", user_docs, "\n")
-
-
-    return(invisible(file.path(user_docs, "index.html")))
-
-  } else {
-    cat("No docs/ folder created by Quarto\n")
-    return(invisible(NULL))
-  }
+  return(data)
 }
-
 
 #' Get basic statistics about the data
 #' @description Calculates basic statistics for the DB-IP dataframe
