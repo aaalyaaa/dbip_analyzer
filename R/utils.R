@@ -4,7 +4,12 @@
 #' @noRd
 
 load_processed_data <- function() {
-  data_path <- "../../processed/dbip_data.parquet"
+  if (file.exists("dbip_data.parquet")) {
+    data_path <- "dbip_data.parquet"
+  }
+  else if (file.exists("processed/dbip_data.parquet")) {
+    data_path <- "processed/dbip_data.parquet"
+  }
 
   if (!file.exists(data_path)) {
     stop("Файл с данными не найден. Сначала запустите ETL пайплайн.")
