@@ -4,7 +4,7 @@
 #' @noRd
 
 
-load_process_data <- function() {
+load_processed_data <- function() {
   user_dir <- getwd()
   user_data_path <- file.path(user_dir, "processed", "dbip_data.parquet")
 
