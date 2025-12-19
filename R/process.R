@@ -4,9 +4,14 @@
 #'
 #' This function processes downloaded DB-IP files.
 #'
+#' @importFrom data.table setkey
+#' @importFrom arrow write_parquet
 #' @return Merged and cleaned data frame
 #' @keywords internal
-process_dbip <- function(files) {
+process_dbip <- function(files, output_dir = "processed") {
+
+  options(warn = -1)
+  on.exit(options(warn = 0))
 
   # 1. Чтение данных
   geo <- data.table::fread(
@@ -72,12 +77,26 @@ process_dbip <- function(files) {
   # 6. Очистка данных
   result[, `:=`(
     as_number = as.character(as_number),
-    state = fifelse(state == "", NA_character_, trimws(state)),
-    city = fifelse(city == "", NA_character_, trimws(city)),
-    continent = fifelse(continent == "ZZ", NA_character_, trimws(continent)),
-    country = fifelse(country == "ZZ", NA_character_, trimws(country)),
+    state = data.table::fifelse(state == "", NA_character_, trimws(state)),
+    city = data.table::fifelse(city == "", NA_character_, trimws(city)),
+    continent = data.table::fifelse(continent == "ZZ", NA_character_, trimws(continent)),
+    country = data.table::fifelse(country == "ZZ", NA_character_, trimws(country)),
     as_organization = trimws(as_organization)
   )]
 
-  return(result)
+  result <- result[!is.na(as_number) & !is.na(as_organization)]
+
+  dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+
+  output_file <- file.path(output_dir, "dbip_data.parquet")
+
+  if (nrow(result) > 0) {
+    arrow::write_parquet(result, output_file)
+    message(sprintf("Данные сохранены в файл: %s (%d строк)",
+                    output_file, nrow(result)))
+  } else {
+    warning("Результат пуст, файл не сохранен")
+  }
+
+  return(invisible(result))
 }
