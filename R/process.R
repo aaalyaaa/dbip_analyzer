@@ -86,10 +86,10 @@ process_dbip <- function(files, output_dir = "processed") {
 
   if (nrow(result) > 0) {
     arrow::write_parquet(result, output_file)
-    message(sprintf("Данные сохранены в файл: %s (%d строк)",
+    message(sprintf("Data saved in file: %s (%d lines)",
                     output_file, nrow(result)))
   } else {
-    warning("Результат пуст, файл не сохранен")
+    warning("Result is empty, file is not saved")
   }
 
   return(invisible(result))
