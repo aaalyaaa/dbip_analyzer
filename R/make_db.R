@@ -9,10 +9,18 @@
 
 make_dashboard <- function() {
   quarto_path <- system.file("quarto", package = "dbipAnalyzer")
-  if (!dir.exists("docs")) dir.create("docs")
-  quarto::quarto_render(quarto_path)
-
-  if (file.exists("docs/index.html")) {
-    message("Файл создан: ", normalizePath("docs/index.html"))
+  if (quarto_path == "" || !dir.exists(quarto_path)) {
+    stop("Package 'dbipAnalyzer' not installed correctly")
   }
-}
+  message("Quarto project found: ", quarto_path)
+  docs_in_package <- file.path(quarto_path, "docs")
+  if (dir.exists(docs_in_package)) {
+    warning("Removing existing docs/ from package to avoid conflicts...")
+    unlink(docs_in_package, recursive = TRUE)
+  }
+
+  message("Rendering dashboard...")
+  quarto::quarto_render(
+    input = quarto_path,
+    quiet = FALSE
+  )}
