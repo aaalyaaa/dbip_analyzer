@@ -4,11 +4,15 @@
 #'
 #' This function processes downloaded DB-IP files.
 #'
+#' @importFrom data.table setkey
+#' @importFrom arrow write_parquet
 #' @return Merged and cleaned data frame
 #' @keywords internal
-process_dbip <- function(files) {
+process_dbip <- function(files, output_dir = "processed") {
 
-  # 1. Чтение данных
+  options(warn = -1)
+  on.exit(options(warn = 0))
+
   geo <- data.table::fread(
     files["geo"],
     header = FALSE,
@@ -22,7 +26,6 @@ process_dbip <- function(files) {
     col.names = c("ip_start", "ip_end", "as_number", "as_organization")
   )
 
-  # 2. Функция преобразования IP в число
   ip_to_int <- function(ip_vector) {
     is_valid <- grepl("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$", ip_vector)
     result <- rep(NA_integer_, length(ip_vector))
@@ -38,20 +41,17 @@ process_dbip <- function(files) {
     return(result)
   }
 
-  # 3. Преобразование IP в числа
   geo[, `:=`(start_num = ip_to_int(ip_start),
              end_num = ip_to_int(ip_end))]
 
   asn[, `:=`(asn_start = ip_to_int(ip_start),
              asn_end = ip_to_int(ip_end))]
 
-  # 4. Фильтрация
   geo_clean <- geo[!is.na(start_num) & !is.na(end_num) &
                      !is.na(latitude) & !is.na(longitude)]
 
   asn_clean <- asn[!is.na(asn_start) & !is.na(asn_end)]
 
-  # 5. Объединение
   setkey(asn_clean, asn_start, asn_end)
 
   result <- asn_clean[geo_clean,
@@ -69,15 +69,28 @@ process_dbip <- function(files) {
                       mult = "first"
   ]
 
-  # 6. Очистка данных
   result[, `:=`(
     as_number = as.character(as_number),
-    state = fifelse(state == "", NA_character_, trimws(state)),
-    city = fifelse(city == "", NA_character_, trimws(city)),
-    continent = fifelse(continent == "ZZ", NA_character_, trimws(continent)),
-    country = fifelse(country == "ZZ", NA_character_, trimws(country)),
+    state = data.table::fifelse(state == "", NA_character_, trimws(state)),
+    city = data.table::fifelse(city == "", NA_character_, trimws(city)),
+    continent = data.table::fifelse(continent == "ZZ", NA_character_, trimws(continent)),
+    country = data.table::fifelse(country == "ZZ", NA_character_, trimws(country)),
     as_organization = trimws(as_organization)
   )]
 
-  return(result)
+  result <- result[!is.na(as_number) & !is.na(as_organization)]
+
+  dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+
+  output_file <- file.path(output_dir, "dbip_data.parquet")
+
+  if (nrow(result) > 0) {
+    arrow::write_parquet(result, output_file)
+    message(sprintf("Data saved in file: %s (%d lines)",
+                    output_file, nrow(result)))
+  } else {
+    warning("Result is empty, file is not saved")
+  }
+
+  return(invisible(result))
 }
