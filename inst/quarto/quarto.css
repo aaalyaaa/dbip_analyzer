@@ -1,12 +1,35 @@
-.main-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-.leaflet-container, .plot-container { margin: 20px 0; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);  width: 120%;}
-table { width: 150%; border-collapse: collapse; margin: 20px 0; }
-th { background: #3498db; color: white; padding: 10px; }
-td { padding: 8px 10px; border-bottom: 1px solid #ddd; }
-pre { background: #f8f9fa; padding: 15px; border-radius: 4px; }
+.main-container { max-width: 1400px; margin: 0 auto;
+    padding: 20px; width: 100%;
+}
+
+.plot-container { margin: 20px 0; padding: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%;
+    max-width: 100%; overflow: visible
+}
+
+.leaflet-container { margin: 20px 0; padding: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%;
+}
+
+
+.table-container {width: 100%; overflow-x: auto; margin: 20px 0;
+}
+
+table { width: 100%; min-width: 800px; border-collapse: collapse; margin: 20px 0;
+}
+
+th { background: #3498db; color: white; padding: 10px; font-size: 16px;
+    white-space: nowrap;
+}
+
+td {
+    padding: 8px 10px; border-bottom: 1px solid #ddd; word-wrap: break-word;
+}
+
+pre {
+    background: #f8f9fa; padding: 15px;
+    border-radius: 4px; overflow-x: auto;
+}
+
 .navbar { display: none; }
-
-
-
-
 
