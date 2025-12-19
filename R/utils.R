@@ -1,15 +1,23 @@
+#' Load processed data from Parquet file
+#' @description Loads data from the specified path and checks if file exists
+#' @return Loaded dataframe with data
+#' @noRd
+
 load_processed_data <- function() {
-  data_path <- "processed/dbip_data.parquet"
+  data_path <- "../../processed/dbip_data.parquet"
 
   if (!file.exists(data_path)) {
     stop("Файл с данными не найден. Сначала запустите ETL пайплайн.")
   }
   data <- arrow::read_parquet(data_path)
-  message("Данные успешно загружены. Структура данных:")
-  print(str(data))
   return(data)
 }
 
+#' Get basic statistics about the data
+#' @description Calculates basic statistics for the DB-IP dataframe
+#' @return List with statistical metrics
+#' @noRd
+#'
 get_data_stats <- function(data) {
   stats_list <- list(
     total_rows = nrow(data),
@@ -17,76 +25,108 @@ get_data_stats <- function(data) {
     total_countries = length(unique(data$country)),
     total_states = length(unique(data$state)),
     total_cities = length(unique(data$city)),
-    column_names = colnames(data)
-  )
+    total_as_organizations = length(unique(data$as_organization)))
 
-  cat("----- СТАТИСТИКА ДАННЫХ DB-IP -----\n")
+  cat("Статистика\n")
   cat("Всего строк:", stats_list$total_rows, "\n")
   cat("Уникальных континентов:", stats_list$total_continents, "\n")
   cat("Уникальных стран:", stats_list$total_countries, "\n")
-  cat("Уникальных регионов/штатов:", stats_list$total_states, "\n")
+  cat("Уникальных регионов:", stats_list$total_states, "\n")
   cat("Уникальных городов:", stats_list$total_cities, "\n")
-  cat("Колонки:", paste(stats_list$column_names, collapse = ", "), "\n")
+  cat("Уникальных AS организаций:", stats_list$total_as_organizations, "\n")
 
   return(stats_list)
 }
 
-# Создание карты
-create_ip_map <- function(data) {
+#' Create interactive map of IP addresses
+#' @description Generates a Leaflet map showing IP address distribution
+#' @return Leaflet map with IP address markers
+#' @noRd
 
-  map <- leaflet::leaflet(data) %>%
-    leaflet::addTiles() %>%
+create_ip_map <- function(data, sample_size) {
+
+  continent_palette <- leaflet::colorFactor(
+    palette = c("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF", "#FFA500"),
+    domain = unique(data$continent)
+  )
+
+  map <- leaflet::leaflet(data) |>
+    leaflet::addTiles() |>
     leaflet::addCircleMarkers(
       lng = ~longitude,
       lat = ~latitude,
-      popup = ~paste("IP Range:", ip_range, "<br>",
-                     "Город:", city, "<br>",
-                     "Регион:", state, "<br>",
-                     "Страна:", country, "<br>",
-                     "Континент:", continent, "<br>",
-                     "AS:", as_number, "<br>",
-                     "Организация:", as_organization),
+      popup = ~paste(
+        "<b>IP Start:</b>", ip_start, "<br>",
+        "<b>IP End:</b>", ip_end, "<br>",
+        "<b>Город:</b>", ifelse(is.na(city), "Н/Д", city), "<br>",
+        "<b>Регион:</b>", ifelse(is.na(state), "Н/Д", state), "<br>",
+        "<b>Страна:</b>", ifelse(is.na(country), "Н/Д", country), "<br>",
+        "<b>Континент:</b>", ifelse(is.na(continent), "Н/Д", continent), "<br>",
+        "<b>AS Number:</b>", ifelse(is.na(as_number), "Н/Д", as_number), "<br>",
+        "<b>Организация:</b>", ifelse(is.na(as_organization), "Н/Д", as_organization)
+      ),
       radius = 5,
-      color = "blue",
-      fillOpacity = 0.5
+      color = ~continent_palette(continent),
+      fillOpacity = 0.5,
+      clusterOptions = leaflet::markerClusterOptions()
+    ) |>
+    leaflet::addControl(
+      "Карта распределения IP-адресов",
+      position = "topright"
+    ) |>
+    leaflet::addLegend(
+      "bottomright",
+      pal = continent_palette,
+      values = ~continent,
+      title = "Континенты",
+      opacity = 1
     )
 
   return(map)
 }
 
-# График распределения по странам
-create_country_chart <- function(data) {
+#' Create chart of top AS organizations
+#' @description Makes a bar chart showing top AS organizations by IP ranges
+#' @return ggplot bar chart
+#' @noRd
 
-  country_counts <- data %>%
-    dplyr::count(country, sort = TRUE) %>%
-    head(10)
-
-  p <- ggplot2::ggplot(country_counts, ggplot2::aes(x = reorder(country, n), y = n)) +
-    ggplot2::geom_bar(stat = "identity", fill = "steelblue") +
+create_as_org_chart <- function(data, top_n) {
+  as_org_counts <- data |>
+    dplyr::filter(!is.na(as_organization) & as_organization != "") |>
+    dplyr::count(as_organization, sort = TRUE) |>
+    head(top_n)
+  p <- ggplot2::ggplot(as_org_counts, ggplot2::aes(x = reorder(as_organization, n), y = n)) +
+    ggplot2::geom_bar(stat = "identity", fill = "darkgreen") +
     ggplot2::coord_flip() +
     ggplot2::labs(
-      title = "Топ-10 стран по количеству IP-адресов",
-      x = "Страна",
-      y = "Количество IP"
+      title = paste("Топ-", top_n, "AS организаций по количеству IP-диапазонов", sep = ""),
+      x = "AS Организация",
+      y = "Количество диапазонов IP"
     ) +
-    ggplot2::theme_minimal()
+    ggplot2::theme_minimal() +
+    ggplot2::theme(
+      axis.text.y = ggplot2::element_text(size = 9),
+      plot.title = ggplot2::element_text(hjust = 0.5, size = 14, face = "bold")
+    )
 
-  return(p)
-}
+  return(p)}
 
-# Создание таблицы
-create_data_table <- function(data, n = 500) {
+#' Create HTML table from data
+#' @description Generates an HTML table showing first n rows of data
+#' @return HTML table
+#' @noRd
 
+create_table <- function(data, n) {
   table_data <- head(data, n)
 
-  table <- DT::datatable(
+  table <- knitr::kable(
     table_data,
-    options = list(
-      pageLength = 25,
-      scrollX = TRUE
-    ),
-    class = 'display compact'
+    format = "html",
+    caption = "Таблица данных DB-IP",
+    align = rep("l", ncol(table_data))
   )
   return(table)
 }
+
+
 
