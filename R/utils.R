@@ -4,16 +4,25 @@
 #' @noRd
 
 load_processed_data <- function() {
-  if (file.exists("dbip_data.parquet")) {
-    data_path <- "dbip_data.parquet"
-  }
-  else if (file.exists("processed/dbip_data.parquet")) {
-    data_path <- "processed/dbip_data.parquet"
-  }
+  possible_paths <- c(
+    "dbip_data.parquet",
+    "processed/dbip_data.parquet",
+    file.path(getwd(), "dbip_data.parquet")
+  )
 
-  if (!file.exists(data_path)) {
-    stop("Файл с данными не найден. Сначала запустите ETL пайплайн.")
-  }
+  data_path <- NULL
+  for (path in possible_paths) {
+    if (file.exists(path)) {
+      data_path <- path
+      break
+    }}
+
+  if (is.null(data_path)) {
+    stop("Error. File dbip_data.parquet not found",
+      "   First run: run_etl\n",
+      "   Or place the file in current directory"
+    )}
+
   data <- arrow::read_parquet(data_path)
   return(data)
 }
