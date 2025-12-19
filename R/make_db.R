@@ -12,7 +12,7 @@ make_dashboard <- function() {
   user_data_path <- file.path(user_dir, "processed", "dbip_data.parquet")
 
   cat("📁 User directory:", user_dir, "\n")
-  cat("🔍 Checking user data:", user_data_path, "\n")
+  cat("check user data:", user_data_path, "\n")
 
   if (!file.exists(user_data_path)) {
     stop(
