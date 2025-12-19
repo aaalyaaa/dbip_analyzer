@@ -2,6 +2,7 @@
 #'
 #' This function downloads geolocation and ASN data from DB-IP website.
 #'
+#' @importFrom dplyr %>%
 #' @return Character vector with paths to downloaded files
 #' @export
 download_dbip <- function() {
