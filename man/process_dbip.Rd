@@ -4,7 +4,7 @@
 \alias{process_dbip}
 \title{Process DB-IP data}
 \usage{
-process_dbip(files)
+process_dbip(files, output_dir = "processed")
 }
 \value{
 Merged and cleaned data frame

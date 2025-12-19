@@ -4,7 +4,7 @@
 #'
 #' @importFrom dplyr %>%
 #' @return Character vector with paths to downloaded files
-#' @export
+#' @keywords internal
 download_dbip <- function() {
 
   dir.create("data-raw/source", showWarnings = FALSE, recursive = TRUE)
@@ -19,7 +19,7 @@ download_dbip <- function() {
     target_link <- grep(pattern, all_links, value = TRUE)[1]
 
     if (is.na(target_link)) {
-      stop("Не удалось найти ссылку")
+      stop("Couldn't find the link")
     }
 
     clean_url <- sub("('| ).*", "", target_link)
@@ -33,13 +33,13 @@ download_dbip <- function() {
   asn_url <- get_clean_url("https://db-ip.com/db/download/ip-to-asn-lite",
                            pattern = "dbip-asn-lite")
 
-  message("Скачивание файла с геолокацией")
+  message("Downloading a file with geolocation...")
   utils::download.file(city_url, "data-raw/source/geo.csv.gz", mode = "wb", timeout = 460)
 
-  message("Скачивание файла с ASN")
+  message("Downloading a file with ASN")
   utils::download.file(asn_url, "data-raw/source/asn.csv.gz", mode = "wb", timeout = 460)
 
-  message("Файлы успешно скачаны")
+  message("Files downloaded successfully")
 
   return(c(geo = "data-raw/source/geo.csv.gz", asn = "data-raw/source/asn.csv.gz"))
 }
