@@ -5,8 +5,8 @@ format: html
 
 ```{r}
 #| echo: false
-source("../../R/utils.R")
-
+#source("../../R/utils.R")
+library(dbipAnalyzer)
 data <- load_processed_data()
 
 stats <- get_data_stats(data)
