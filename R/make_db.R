@@ -12,85 +12,52 @@ make_dashboard <- function() {
   user_data_path <- file.path(user_dir, "processed", "dbip_data.parquet")
 
   if (!file.exists(user_data_path)) {
-    stop("Файл данных не найден. Сначала запустите run_etl_pipeline()")
+    stop("Сначала запустите run_etl_pipeline()")
   }
 
-  cat("📁 Текущая рабочая директория:", user_dir, "\n")
-  cat("📁 Файл данных найден:", file.exists(user_data_path), "\n")
+  docs_dir <- file.path(user_dir, "docs")
+  if (!dir.exists(docs_dir)) {
+    dir.create(docs_dir, recursive = TRUE)
+    cat("📁 Создана папка docs в:", normalizePath(docs_dir), "\n")
+  }
 
-  # Создаем временную директорию
-  temp_dir <- tempfile("dashboard_")
+  temp_dir <- tempfile("quarto_work_")
   dir.create(temp_dir, recursive = TRUE)
-  cat("📁 Создана временная директория:", temp_dir, "\n")
 
-  # Копируем шаблон Quarto
+
   quarto_path <- system.file("quarto", package = "dbipAnalyzer")
-  if (quarto_path == "") {
-    stop("Не найден шаблон Quarto в пакете dbipAnalyzer")
-  }
+  if (quarto_path == "") stop("Шаблон Quarto не найден")
 
-  file.copy(quarto_path, temp_dir, recursive = TRUE)
-  temp_quarto <- file.path(temp_dir, "quarto")
 
-  # Копируем данные
-  temp_data_dir <- file.path(temp_quarto, "processed")
-  dir.create(temp_data_dir, recursive = TRUE, showWarnings = FALSE)
-  file.copy(user_data_path, file.path(temp_data_dir, "dbip_data.parquet"))
+  file.copy(list.files(quarto_path, full.names = TRUE),
+            temp_dir, recursive = TRUE)
+
+
+  temp_data_path <- file.path(temp_dir, "processed")
+  dir.create(temp_data_path, showWarnings = FALSE)
+  file.copy(user_data_path, file.path(temp_data_path, "dbip_data.parquet"))
 
 
   old_wd <- getwd()
-  setwd(temp_quarto)
+  setwd(temp_dir)
 
-  cat("🔧 Запускаем рендеринг Quarto...\n")
-  quarto::quarto_render(".", quiet = FALSE)
+  cat("🎨 Рендерим dashboard...\n")
 
+  # Способ 1: Используем quarto::quarto_render с output_file
+  output_file <- file.path(docs_dir, "index.html")
+
+  # Рендерим прямо в целевую папку
+  quarto::quarto_render(
+    input = "index.qmd",
+    output_file = output_file,
+    as_job = FALSE  # Важно! Не фоновый режим
+  )
 
   setwd(old_wd)
 
-
-  created_html <- file.path(temp_quarto, "docs", "index.html")
-  cat("🔍 Ищем файл по пути:", created_html, "\n")
-  cat("🔍 Файл существует:", file.exists(created_html), "\n")
-
-  if (!file.exists(created_html)) {
-
-    all_html_files <- list.files(temp_dir, pattern = "\\.html$",
-                                 recursive = TRUE, full.names = TRUE)
-    cat("🔍 Все найденные HTML файлы:", all_html_files, "\n")
-
-    if (length(all_html_files) > 0) {
-      created_html <- all_html_files[1]
-      cat("✅ Используем файл:", created_html, "\n")
-    } else {
-      stop("HTML файл не был создан")
-    }
-  }
-
-
-  user_docs_dir <- file.path(user_dir, "docs")
-  if (!dir.exists(user_docs_dir)) {
-    dir.create(user_docs_dir, recursive = TRUE)
-    cat("📁 Создана папка docs в:", user_docs_dir, "\n")
-  }
-
-
-  target_path <- file.path(user_docs_dir, "index.html")
-  cat("📋 Копируем файл...\n")
-  cat("   Из:", created_html, "\n")
-  cat("   В:", target_path, "\n")
-
-  file.copy(created_html, target_path, overwrite = TRUE)
-
-  if (file.exists(target_path)) {
-    file_size <- file.info(target_path)$size
-    cat("\n✅ УСПЕХ! Dashboard создан!\n")
-    cat("📄 Файл:", normalizePath(target_path), "\n")
-
-
-  } else {
-    cat("\n❌ ОШИБКА: Файл не скопирован\n")
-    cat("   Проверьте права доступа к директории\n")
-  }
-
-  invisible(target_path)
+  # 5. Проверяем результат
+  if (file.exists(output_file)) {
+    cat("\n✅ Dashboard успешно создан!\n")
+    cat("📁 Расположение:", normalizePath(output_file), "\n")}
+  else {cat("ошибка")}
 }
