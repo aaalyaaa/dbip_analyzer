@@ -33,6 +33,40 @@ make_demo_dashboard <- function() {
 
   old_wd <- getwd()
   setwd(test_dir)
+  cat("Ищем demo.rda...\n")
+
+  # 1. Проверяем в исходниках (для разработки)
+  demo_rda_path <- NULL
+
+  # Сначала ищем в предполагаемой директории исходников
+  potential_paths <- c(
+    "../../dbipAnalyzer/data/demo.rda",          # Относительный путь
+    "../dbipAnalyzer/data/demo.rda",             # Другой относительный путь
+    file.path(getwd(), "dbipAnalyzer/data/demo.rda"),  # Текущая директория
+    file.path(dirname(.libPaths()[1]), "dbipAnalyzer/data/demo.rda")  # Рядом с библиотекой
+  )
+
+  for (path in potential_paths) {
+    if (file.exists(path)) {
+      demo_rda_path <- path
+      break
+    }
+  }
+
+  # 2. Если не нашли, пробуем через system.file
+  if (is.null(demo_rda_path)) {
+    demo_rda_path <- system.file("data", "demo.rda", package = "dbipAnalyzer", mustWork = FALSE)
+  }
+
+  # 3. Если нашли файл, копируем его
+  if (!is.null(demo_rda_path) && file.exists(demo_rda_path)) {
+    temp_data_dir <- file.path(temp_quarto, "data")
+    dir.create(temp_data_dir, recursive = TRUE, showWarnings = FALSE)
+    file.copy(demo_rda_path, file.path(temp_data_dir, "demo.rda"))
+    cat("Скопирован demo.rda из:", demo_rda_path, "\n")
+  } else {
+    warning("Файл demo.rda не найден. Будет использоваться запасной вариант.")
+  }
   quarto::quarto_render("index1.qmd", quiet = FALSE)
   setwd(old_wd)
 
