@@ -17,10 +17,12 @@ Authors@R: c(
       role = "aut"
     )
   )
-Description: Toolkit for collecting, processing and visualizing 
-    DB-IP geolocation and autonomous systems data. Provides ETL 
-    pipeline and interactive dashboards of internet infrastructure 
-    topology and global connectivity patterns.
+Description: n R package for collecting, processing, and visualizing Internet infrastructure data 
+    from DBIP (https://db-ip.com/). The package provides automated tools to download IP geolocation 
+    and Autonomous System (ASN) data, transform it into tidy formats, and create interactive 
+    dashboards for analyzing Internet topology and global connectivity patterns. Key features 
+    include data scraping and ETL pipelines, quatro-based web applications with geographic 
+    visualizations, and containerized deployment via Docker.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -33,7 +35,7 @@ Imports:
     ggplot2,
     DT,
     arrow,
-    httpuv,
+    servr,
     quarto
 RoxygenNote: 7.3.3
 Depends: 

@@ -19,15 +19,12 @@ RUN wget -q https://github.com/quarto-dev/quarto-cli/releases/download/v1.4.553/
 WORKDIR /app
 
 # Copy package files
-COPY DESCRIPTION NAMESPACE ./
-COPY R/ ./R/
-COPY inst/ ./inst/
-COPY man/ ./man/
+COPY . .
 
 # Install R packages
-RUN R -e "install.packages(c('remotes', 'rvest', 'dplyr', 'data.table', 'R.utils', 'leaflet', 'ggplot2', 'DT', 'arrow', 'httpuv', 'quarto'), repos='https://cloud.r-project.org')"
+RUN R -e "install.packages(c('remotes', 'rvest', 'dplyr', 'data.table', 'R.utils', 'leaflet', 'ggplot2', 'DT', 'arrow', 'quarto', 'servr'), repos='https://cloud.r-project.org')"
 
-# Install the package using remotes
+# Install the package
 RUN R -e "remotes::install_local('.', dependencies = FALSE, upgrade = 'never')"
 
 # Expose port

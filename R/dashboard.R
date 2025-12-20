@@ -4,43 +4,58 @@
 #' @param docs_dir Directory with dashboard HTML
 #' @export
 .start_server <- function(port = 8080, docs_dir = "docs") {
-  if (!requireNamespace("httpuv", quietly = TRUE)) {
-    stop("Install httpuv: install.packages('httpuv')")
-  }
-  
-  index_path <- file.path(docs_dir, "index.html")
-  if (!file.exists(index_path)) {
-    stop(sprintf("Dashboard not found: %s\nRun make_dashboard() first.", index_path))
-  }
-  
-  message(sprintf("Starting server on port %d...", port))
-  message(sprintf("   Open: http://localhost:%d", port))
-  message("   Press Ctrl+C to stop")
-  
-  html_content <- paste(readLines(index_path, warn = FALSE), collapse = "\n")
-  
-  app <- list(
-    call = function(req) {
-      list(
-        status = 200L,
-        headers = list('Content-Type' = 'text/html'),
-        body = html_content
+  # Проверяем, доступен ли порт
+  check_port <- function(port) {
+    tryCatch({
+      con <- socketConnection(
+        host = "127.0.0.1",
+        port = port,
+        server = FALSE,
+        timeout = 1
       )
-    }
-  )
+      close(con)
+      return(FALSE)  # Порт занят
+    }, error = function(e) {
+      return(TRUE)   # Порт свободен
+    })
+  }
   
-  httpuv::runServer("0.0.0.0", port, app)
+  # Если порт занят, пробуем следующий
+  if (!check_port(port)) {
+    message(sprintf("Port %d is busy, trying %d...", port, port + 1))
+    port <- port + 1
+  }
+  
+  # Добавляем проверку servr для Docker
+  if (!requireNamespace("servr", quietly = TRUE)) {
+    if (!interactive()) {
+      # В Docker автоматически устанавливаем
+      install.packages("servr", repos = "https://cloud.r-project.org")
+      library(servr)
+    } else {
+      stop("Install servr: install.packages('servr')")
+    }
+  }
+  
+  if (!dir.exists(docs_dir)) {
+    stop("Run make_dashboard() first")
+  }
+  
+  url <- sprintf("http://localhost:%d", port)
+  message("Server started at: ", url)
+  
+  servr::httd(dir = docs_dir, port = port, daemon = FALSE)
 }
 
-#' Run complete application
+#' Run complete DB-IP Analyzer
 #'
 #' @param port Port for HTTP server
 #' @export
 run_app <- function(port = 8080) {
-  message("Running complete DB-IP Analyzer...")
+  message("Starting DB-IP Analyzer...")
   
   # 1. ETL
-  message("Running ETL...")
+  message("Processing data...")
   run_etl()
   
   # 2. Dashboard
@@ -48,5 +63,25 @@ run_app <- function(port = 8080) {
   make_dashboard()
   
   # 3. Server
-  .start_server(port = port)
+  message(sprintf("Starting server on port %d...", port))
+  
+  # Открываем браузер автоматически
+  final_port <- port
+  url <- sprintf("http://localhost:%d", final_port)
+  
+  if (interactive()) {
+    message("Opening browser automatically...")
+    Sys.sleep(2)
+    tryCatch({
+      utils::browseURL(url)
+    }, error = function(e) {
+      message("Could not open browser automatically")
+      message("   Please open manually: ", url)
+    })
+  } else {
+    # В Docker контейнере показываем URL
+    message("Dashboard URL: ", url)
+  }
+  
+  .start_server(port = final_port)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/dashboard.R
 \name{run_app}
 \alias{run_app}
-\title{Run complete application}
+\title{Run complete DB-IP Analyzer}
 \usage{
 run_app(port = 8080)
 }
@@ -10,5 +10,5 @@ run_app(port = 8080)
 \item{port}{Port for HTTP server}
 }
 \description{
-Run complete application
+Run complete DB-IP Analyzer
 }
