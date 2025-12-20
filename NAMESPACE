@@ -2,7 +2,7 @@
 
 export(.start_server)
 export(make_dashboard)
-export(make_demo_dashboard)
+export(make_test_dashboard)
 export(run_app)
 export(run_etl)
 importFrom(arrow,write_parquet)
