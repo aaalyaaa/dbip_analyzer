@@ -5,19 +5,48 @@ format: html
 
 ```{r}
 #| echo: false
+# Ищем demo.rda в пакете
 rda_path <- system.file("data", "demo.rda", package = "dbipAnalyzer")
 
+# Диагностика
+cat("Путь к demo.rda:", rda_path, "\n")
+cat("Файл существует:", file.exists(rda_path), "\n")
+cat("Рабочая директория:", getwd(), "\n")
+
+# Проверяем, найден ли файл
+if (rda_path == "" || !file.exists(rda_path)) {
+  # Пробуем другой способ поиска
+  pkg_path <- find.package("dbipAnalyzer")
+  rda_path <- file.path(pkg_path, "data", "demo.rda")
+  cat("Альтернативный путь:", rda_path, "\n")
+  cat("Файл существует:", file.exists(rda_path), "\n")
+  
+  if (!file.exists(rda_path)) {
+    stop("Файл demo.rda не найден. Проверьте установку пакета dbipAnalyzer")
+  }
+}
+
+# Определяем путь для demo.parquet
 data_path <- file.path("data", "demo.parquet")
 
+# Создаем папку data если ее нет
 if (!dir.exists("data")) {
   dir.create("data", recursive = TRUE)
 }
+
+# Загружаем данные из demo.rda
+cat("Загружаем данные из:", rda_path, "\n")
 env <- new.env()
 load(rda_path, envir = env)
 data_name <- ls(env)[1]
 demo_data <- get(data_name, envir = env)
 
+# Сохраняем как parquet
 arrow::write_parquet(demo_data, data_path)
+cat("Создан файл:", data_path, "\n")
+
+# Загружаем данные для использования в дашборде
+data <- arrow::read_parquet(data_path)
 
 data <- dbipAnalyzer:::load_processed_data(data_path)
 ```
