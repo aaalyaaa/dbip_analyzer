@@ -11,12 +11,12 @@ data <- dbipAnalyzer:::load_processed_data()
 ```{r}
 #| echo: false
 stats <-  invisible(dbipAnalyzer:::get_data_stats(data))
-map_data <- head(data, 20)  
-ip_map <- dbipAnalyzer:::create_ip_map(map_data, 20)
+map_data <- head(data, 500000)  
+ip_map <- dbipAnalyzer:::create_ip_map(map_data, 500000)
 as_chart <- dbipAnalyzer:::create_as_org_chart(data, top_n = 15)
 data_table <- dbipAnalyzer:::create_table(data, n = 200)
 ```
-### Карта распределения IP - адресов
+### Карта распределения IP - адресов (для первых 500000)
 ```{r}
 #| echo: false
 ip_map
