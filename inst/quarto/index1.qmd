@@ -26,26 +26,76 @@ if (rda_path == "" || !file.exists(rda_path)) {
   }
 }
 
-# Определяем путь для demo.parquet
-data_path <- file.path("data", "demo.parquet")
+# Получаем путь к исходникам пакета
+pkg_name <- "dbipAnalyzer"
 
-# Создаем папку data если ее нет
-if (!dir.exists("data")) {
-  dir.create("data", recursive = TRUE)
+# Пытаемся найти demo.rda в разных местах
+rda_found <- FALSE
+
+# 1. Проверяем, не находимся ли мы в директории разработки
+if (file.exists("DESCRIPTION")) {
+  desc <- readLines("DESCRIPTION", n = 1)
+  if (grepl(pkg_name, desc)) {
+    # Мы в директории разработки пакета
+    if (file.exists("data/demo.rda")) {
+      rda_path <- "data/demo.rda"
+      rda_found <- TRUE
+      cat("Найден demo.rda в директории разработки\n")
+    }
+  }
 }
 
-# Загружаем данные из demo.rda
-cat("Загружаем данные из:", rda_path, "\n")
+# 2. Ищем в родительских директориях
+if (!rda_found) {
+  # Поднимаемся наверх от текущей директории
+  current_dir <- getwd()
+  max_levels <- 5
+  
+  for (i in 1:max_levels) {
+    parent_dir <- dirname(current_dir)
+    potential_path <- file.path(parent_dir, pkg_name, "data", "demo.rda")
+    
+    if (file.exists(potential_path)) {
+      rda_path <- potential_path
+      rda_found <- TRUE
+      cat("Найден demo.rda в:", rda_path, "\n")
+      break
+    }
+    current_dir <- parent_dir
+  }
+}
+
+# 3. Если все еще не нашли, создаем путь относительно библиотеки
+if (!rda_found) {
+  lib_path <- .libPaths()[1]
+  rda_path <- file.path(lib_path, pkg_name, "data", "demo.rda")
+  
+  if (file.exists(rda_path)) {
+    rda_found <- TRUE
+    cat("Найден demo.rda в библиотеке:", rda_path, "\n")
+  }
+}
+
+# Если файл не найден, останавливаемся с понятной ошибкой
+if (!rda_found) {
+  stop("Файл demo.rda не найден. Убедитесь, что пакет установлен из исходников с включенными данными.")
+}
+
+# Загружаем данные
 env <- new.env()
 load(rda_path, envir = env)
 data_name <- ls(env)[1]
 demo_data <- get(data_name, envir = env)
 
-# Сохраняем как parquet
-arrow::write_parquet(demo_data, data_path)
-cat("Создан файл:", data_path, "\n")
+cat("Загружены демо данные '", data_name, "' размером: ", 
+    nrow(demo_data), "x", ncol(demo_data), "\n")
 
-# Загружаем данные для использования в дашборде
+# Сохраняем как parquet
+data_path <- file.path("data", "demo.parquet")
+if (!dir.exists("data")) dir.create("data", recursive = TRUE)
+arrow::write_parquet(demo_data, data_path)
+
+# Загружаем для использования
 data <- arrow::read_parquet(data_path)
 
 data <- dbipAnalyzer:::load_processed_data(data_path)
