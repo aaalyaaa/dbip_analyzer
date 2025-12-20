@@ -5,7 +5,9 @@ format: html
 
 ```{r}
 #| echo: false
-data <- dbipAnalyzer:::load_processed_data()
+user_dir <- getwd()
+data_path <- file.path(user_dir, "processed", "dbip_data.parquet")
+data <- dbipAnalyzer:::load_processed_data(data_path)
 ```
 ### Статистика
 ```{r}

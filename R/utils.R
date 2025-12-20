@@ -3,10 +3,7 @@
 #' @return Loaded dataframe with data
 #' @noRd
 
-load_processed_data <- function() {
-
-  user_dir <- getwd()
-  data_path <- file.path(user_dir, "processed", "dbip_data.parquet")
+load_processed_data <- function(data_path) {
 
   if (!file.exists(data_path)) {
     stop(
@@ -14,7 +11,6 @@ load_processed_data <- function() {
   data <- suppressMessages({
     arrow::read_parquet(data_path, quiet = TRUE)
   })
-
   return(data)
 }
 
@@ -48,10 +44,23 @@ get_data_stats <- function(data) {
 #' @noRd
 
 create_ip_map <- function(data, sample_size) {
+  continent_colors <- c(
+    "Africa" = "#FF0000",
+    "Asia" = "#00FF00",
+    "Europe" = "#0000FF",
+    "North America" = "#FFFF00",
+    "South America" = "#FF00FF",
+    "Oceania" = "#00FFFF",
+    "Antarctica" = "#FFA500"
+  )
+
+  data$continent <- factor(data$continent,
+                           levels = names(continent_colors))
 
   continent_palette <- leaflet::colorFactor(
-    palette = c("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF", "#FFA500"),
-    domain = unique(data$continent)
+    palette = continent_colors,
+    domain = data$continent,
+    na.color = "#808080"
   )
 
   map <- leaflet::leaflet(data) |>
@@ -65,7 +74,7 @@ create_ip_map <- function(data, sample_size) {
         "<b>Город:</b>", ifelse(is.na(city), "Н/Д", city), "<br>",
         "<b>Регион:</b>", ifelse(is.na(state), "Н/Д", state), "<br>",
         "<b>Страна:</b>", ifelse(is.na(country), "Н/Д", country), "<br>",
-        "<b>Континент:</b>", ifelse(is.na(continent), "Н/Д", continent), "<br>",
+        "<b>Континент:</b>", ifelse(is.na(continent), "Н/Д", as.character(continent)), "<br>",
         "<b>AS Number:</b>", ifelse(is.na(as_number), "Н/Д", as_number), "<br>",
         "<b>Организация:</b>", ifelse(is.na(as_organization), "Н/Д", as_organization)
       ),

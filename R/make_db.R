@@ -33,7 +33,7 @@ make_dashboard <- function() {
 
   cat("Запускаем рендеринг Quarto\n")
 
-  quarto::quarto_render(".", as_job = FALSE, quiet = TRUE)
+  quarto::quarto_render(".", as_job = FALSE, quiet = FALSE)
 
   setwd(old_wd)
 
