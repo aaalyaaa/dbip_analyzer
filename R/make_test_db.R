@@ -8,158 +8,177 @@
 #' @export
 
 make_demo_dashboard <- function() {
-  # Создаем временную директорию для рендеринга
-  temp_dir <- tempfile("demo_dashboard_")
-  dir.create(temp_dir, recursive = TRUE)
+  # 1. Создаем и очищаем test_docs директорию
+  test_docs_dir <- file.path(getwd(), "test_docs")
+  if (dir.exists(test_docs_dir)) {
+    unlink(test_docs_dir, recursive = TRUE)
+  }
+  dir.create(test_docs_dir, recursive = TRUE)
 
-  cat("Создаем демо-дашборд...\n")
+  cat("Создаем демо-дашборд в test_docs...\n")
 
-  # 1. Копируем Quarto шаблон
+  # 2. Копируем все файлы из quarto шаблона
   quarto_dir <- system.file("quarto", package = "dbipAnalyzer")
   if (quarto_dir == "") {
     stop("Не найден шаблон Quarto в пакете")
   }
 
-  file.copy(quarto_dir, temp_dir, recursive = TRUE)
-  temp_quarto <- file.path(temp_dir, "quarto")
+  # Копируем ВСЕ файлы из inst/quarto
+  file.copy(quarto_dir, test_docs_dir, recursive = TRUE)
 
-  # 2. Загружаем встроенные данные и создаем demo.parquet
+  # Теперь у нас в test_docs_dir лежат:
+  # - index.qmd
+  # - index1.qmd
+  # - _quarto.yml
+  # - quarto.css
+
+  # 3. Загружаем встроенные данные demo
   data("demo", package = "dbipAnalyzer")
 
-  # Создаем необходимые папки
-  data_dir <- file.path(temp_quarto, "data")
-  processed_dir <- file.path(temp_quarto, "processed")
+  # 4. Создаем структуру папок с данными
+  data_dir <- file.path(test_docs_dir, "data")
+  processed_dir <- file.path(test_docs_dir, "processed")
   dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
   dir.create(processed_dir, recursive = TRUE, showWarnings = FALSE)
 
-  # Сохраняем данные в оба места
+  # Сохраняем данные в формате parquet
   arrow::write_parquet(demo, file.path(data_dir, "demo.parquet"))
   arrow::write_parquet(demo, file.path(processed_dir, "dbip_data.parquet"))
 
-  # 3. Переходим во временную директорию и рендерим
+  # 5. Модифицируем _quarto.yml чтобы output был в текущей директории
+  quarto_yml_path <- file.path(test_docs_dir, "_quarto.yml")
+  if (file.exists(quarto_yml_path)) {
+    yml_content <- readLines(quarto_yml_path, warn = FALSE)
+
+    # Заменяем output-dir: docs на текущую директорию
+    yml_content <- gsub(
+      "output-dir:\\s*docs",
+      "output-dir: .",
+      yml_content
+    )
+
+    # Или добавляем если нет
+    if (!any(grepl("output-dir:", yml_content))) {
+      # Находим project section
+      project_idx <- grep("^project:", yml_content)
+      if (length(project_idx) > 0) {
+        yml_content <- c(
+          yml_content[1:project_idx],
+          "  output-dir: .",
+          yml_content[(project_idx + 1):length(yml_content)]
+        )
+      }
+    }
+
+    writeLines(yml_content, quarto_yml_path)
+    cat("Обновлен _quarto.yml\n")
+  }
+
+  # 6. Переходим в test_docs_dir и рендерим
   old_wd <- getwd()
-  setwd(temp_quarto)
+  setwd(test_docs_dir)
 
-  cat("Рендеринг дашборда...\n")
+  cat("Рендеринг index1.qmd как test_index.html...\n")
 
-  # Рендерим только index1.qmd
-  quarto::quarto_render("index1.qmd", as_job = FALSE, quiet = FALSE)
+  # Рендерим с указанием output_file
+  quarto::quarto_render(
+    input = "index1.qmd",
+    output_file = "test_index.html",  # ⬅️ Ключевое изменение!
+    as_job = FALSE,
+    quiet = FALSE
+  )
 
   setwd(old_wd)
 
-  # 4. Создаем папку test_docs
-  test_docs_dir <- file.path(getwd(), "test_docs")
-  if (!dir.exists(test_docs_dir)) {
-    dir.create(test_docs_dir, recursive = TRUE)
-  } else {
-    # Очищаем существующую папку
-    unlink(test_docs_dir, recursive = TRUE)
-    dir.create(test_docs_dir, recursive = TRUE)
-  }
+  # 7. Проверяем что создалось
+  result_html <- file.path(test_docs_dir, "test_index.html")
 
-  # 5. Копируем и переименовываем все созданные файлы с префиксом test_
-
-  # Ищем папку с результатами (обычно docs/ или корень)
-  result_dirs <- c(
-    file.path(temp_quarto, "docs"),
-    temp_quarto
-  )
-
-  result_dir <- NULL
-  for (dir in result_dirs) {
-    if (dir.exists(dir) && length(list.files(dir)) > 0) {
-      result_dir <- dir
-      break
+  # Если не создался test_index.html, ищем другие варианты
+  if (!file.exists(result_html)) {
+    html_files <- list.files(test_docs_dir, pattern = "\\.html$", full.names = TRUE)
+    if (length(html_files) > 0) {
+      result_html <- html_files[1]
+      cat("Найден HTML файл:", basename(result_html), "\n")
+    } else {
+      stop("HTML файл не был создан")
     }
   }
 
-  if (is.null(result_dir)) {
-    stop("Не удалось найти сгенерированные файлы")
-  }
+  # 8. Удаляем исходные файлы которые не нужны пользователю
+  cat("Очищаем временные файлы...\n")
 
-  cat("Копируем файлы с префиксом test_...\n")
+  files_to_remove <- c(
+    "index.qmd",        # исходный файл
+    "index1.qmd",       # исходный файл
+    "_quarto.yml",      # конфигурация
+    "quarto.css",       # стили
+    "data",             # папка с демо данными
+    "processed"         # папка с данными
+  )
 
-  # Функция для копирования с переименованием
-  copy_with_prefix <- function(from_dir, to_dir, prefix = "test_") {
-    all_files <- list.files(from_dir,
-                            full.names = TRUE,
-                            recursive = TRUE,
-                            all.files = TRUE,
-                            no.. = TRUE)
-
-    for (file in all_files) {
-      # Получаем относительный путь
-      rel_path <- substr(file, nchar(from_dir) + 2, nchar(file))
-
-      # Разделяем путь на части
-      path_parts <- unlist(strsplit(rel_path, "/"))
-
-      # Добавляем префикс к имени файла (но не к папкам)
-      if (length(path_parts) > 0) {
-        # Только к последней части (файлу)
-        if (!grepl("\\.", path_parts[length(path_parts)])) {
-          # Если это папка (без расширения), оставляем как есть
-          new_name <- path_parts
-        } else {
-          # Если это файл, добавляем префикс
-          path_parts[length(path_parts)] <- paste0(prefix,
-                                                   path_parts[length(path_parts)])
-          new_name <- path_parts
-        }
-
-        new_rel_path <- paste(new_name, collapse = "/")
-        target_file <- file.path(to_dir, new_rel_path)
-
-        # Создаем директорию если нужно
-        target_dir <- dirname(target_file)
-        if (!dir.exists(target_dir)) {
-          dir.create(target_dir, recursive = TRUE, showWarnings = FALSE)
-        }
-
-        # Копируем файл
-        file.copy(file, target_file, overwrite = TRUE)
+  for (file in files_to_remove) {
+    path <- file.path(test_docs_dir, file)
+    if (file.exists(path)) {
+      if (file.info(path)$isdir) {
+        unlink(path, recursive = TRUE)
+      } else {
+        file.remove(path)
       }
     }
   }
 
-  # Копируем все файлы
-  copy_with_prefix(result_dir, test_docs_dir, "test_")
+  # 9. Переименовываем папку index_files если она есть (для index1.qmd)
+  index_files_dir <- file.path(test_docs_dir, "index_files")
+  if (dir.exists(index_files_dir)) {
+    # Проверяем не создал ли quarto уже test_index_files
+    test_index_files_dir <- file.path(test_docs_dir, "test_index_files")
 
-  # 6. Очищаем временные файлы
-  unlink(temp_dir, recursive = TRUE)
-
-  # 7. Показываем пользователю что получилось
-  cat("✅ ДЕМО-ДАШБОРД УСПЕШНО СОЗДАН!\n")
-  cat("\n📁 Папка: test_docs/\n")
-  cat("📋 Созданные файлы:\n")
-
-  # Показываем структуру файлов
-  files_in_test_docs <- list.files(test_docs_dir, recursive = TRUE)
-  for (file in files_in_test_docs) {
-    cat("  - ", file, "\n")
-  }
-
-  # Основной HTML файл
-  main_html <- file.path(test_docs_dir, "test_index.html")
-
-  if (!file.exists(main_html)) {
-    # Ищем любой HTML файл с префиксом test_
-    html_files <- list.files(test_docs_dir, pattern = "^test_.*\\.html$",
-                             recursive = TRUE, full.names = TRUE)
-    if (length(html_files) > 0) {
-      main_html <- html_files[1]
+    if (!dir.exists(test_index_files_dir)) {
+      file.rename(index_files_dir, test_index_files_dir)
+      cat("Переименована папка ресурсов\n")
     }
   }
 
-  cat("\n📊 Основной файл:", basename(main_html), "\n")
-  cat("📍 Полный путь:", main_html, "\n")
+  # 10. Обновляем ссылки в HTML если нужно
+  if (file.exists(result_html)) {
+    html_content <- readLines(result_html, warn = FALSE)
 
-  # 8. Автоматически открываем в браузере
-  if (interactive() && file.exists(main_html)) {
-    cat("\nОткрываю в браузере...\n")
-    Sys.sleep(1)
-    utils::browseURL(main_html)
+    # Проверяем есть ли ссылки на index_files
+    has_index_files <- any(grepl('"index_files/', html_content))
+
+    if (has_index_files) {
+      # Заменяем ссылки на index_files
+      html_content <- gsub('"index_files/', '"test_index_files/', html_content)
+      html_content <- gsub("'index_files/", "'test_index_files/", html_content)
+
+      writeLines(html_content, result_html)
+      cat("Обновлены ссылки в HTML файле\n")
+    }
   }
 
-  invisible(main_html)
+  # 11. Показываем результат пользователю
+  cat("\n" + stringr::str_dup("=", 50) + "\n")
+  cat("✅ ДЕМО-ДАШБОРД УСПЕШНО СОЗДАН!\n")
+  cat("\n📁 Папка: test_docs/\n")
+
+  # Показываем структуру файлов
+  created_files <- list.files(test_docs_dir, recursive = TRUE)
+  if (length(created_files) > 0) {
+    cat("📋 Созданные файлы:\n")
+    for (f in created_files) {
+      cat("  - ", f, "\n")
+    }
+  }
+
+  cat("\n📍 Основной файл: ", basename(result_html), "\n")
+  cat("📊 Размер: ", round(file.info(result_html)$size / 1024, 1), "KB\n")
+  cat("\n" + stringr::str_dup("=", 50) + "\n")
+
+  # 12. Автоматически открываем в браузере
+  if (interactive() && file.exists(result_html)) {
+    cat("\nОткрываю дашборд в браузере...\n")
+    utils::browseURL(result_html)
+  }
+
+  invisible(result_html)
 }
