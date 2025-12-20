@@ -32,3 +32,6 @@ Thumbs.db
 *~
 *.bak
 *.swp
+
+# Generated documentation and dashboards
+docs/

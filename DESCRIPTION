@@ -1,16 +1,26 @@
 Package: dbipAnalyzer
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
+Title: DB-IP Data Collection and Analysis Toolkit
+Version: 0.1.6
 Authors@R: c(
     person(
-      "Jane", "Doe",
-      email = "jane@example.com",
+      "Alina", "Gribanova",
+      email = "gribanovaaalya@yandex.ru",
       role = c("aut", "cre")
+    ),
+    person(
+      "Anastasia", "Erofeeva", 
+      role = "aut"
+    ),
+    person(
+      "Tatyana", "Maksimova", 
+      role = "aut"
     )
   )
-Description: More about what it does (maybe more than one line).
-    Continuation lines should be indented.
+Description: Toolkit for collecting, processing and visualizing 
+    DB-IP geolocation and autonomous systems data. Provides ETL 
+    pipeline and interactive dashboards of internet infrastructure 
+    topology and global connectivity patterns.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
