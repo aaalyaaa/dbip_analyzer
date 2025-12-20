@@ -4,59 +4,20 @@ format: html
 ---
 
 ```{r}
-# Проверяем наличие demo.rda
-rda_path <- "data/demo.rda"
+data("demo", package = "dbipAnalyzer")
 
-if (!file.exists(rda_path)) {
-  # Пробуем другие возможные пути
-  alternative_paths <- c(
-    "../data/demo.rda",
-    "./demo.rda",
-    "demo.rda"
-  )
-  
-  for (path in alternative_paths) {
-    if (file.exists(path)) {
-      rda_path <- path
-      cat("Найден demo.rda по альтернативному пути:", path, "\n")
-      break
-    }
-  }
+# Определяем путь для сохранения
+data_dir <- "data"
+if (!dir.exists(data_dir)) {
+  dir.create(data_dir, recursive = TRUE)
 }
 
-if (!file.exists(rda_path)) {
-  # Если файл не найден, создаем демо данные на лету
-  cat("Файл demo.rda не найден, создаем демо данные...\n")
-  
-  demo_data <- data.frame(
-    date = seq.Date(from = as.Date("2024-01-01"), 
-                    to = as.Date("2024-03-31"), 
-                    by = "day"),
-    ip_address = replicate(90, paste0(sample(0:255, 4, TRUE), collapse = ".")),
-    country = sample(c("RU", "US", "DE", "CN"), 90, replace = TRUE),
-    requests = round(rnorm(90, mean = 1000, sd = 200)),
-    response_time = round(runif(90, 50, 500), 2)
-  )
-  
-  cat("Созданы демо данных размером:", nrow(demo_data), "x", ncol(demo_data), "\n")
-} else {
-  # Загружаем данные из demo.rda
-  cat("Загружаем данные из:", rda_path, "\n")
-  env <- new.env()
-  load(rda_path, envir = env)
-  data_name <- ls(env)[1]
-  demo_data <- get(data_name, envir = env)
-  
-  cat("Загружены демо данные '", data_name, "' размером: ", 
-      nrow(demo_data), "x", ncol(demo_data), "\n")
-}
+data_path <- file.path(data_dir, "demo.parquet")
 
 # Сохраняем как parquet
-data_path <- file.path("data", "demo.parquet")
-if (!dir.exists("data")) dir.create("data", recursive = TRUE)
-arrow::write_parquet(demo_data, data_path)
+arrow::write_parquet(demo, data_path)
 
-# Загружаем для использования
+# Загружаем данные
 data <- arrow::read_parquet(data_path)
 
 data <- dbipAnalyzer:::load_processed_data(data_path)
