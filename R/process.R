@@ -80,17 +80,5 @@ process_dbip <- function(files, output_dir = "processed") {
 
   result <- result[!is.na(as_number) & !is.na(as_organization)]
 
-  dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-
-  output_file <- file.path(output_dir, "dbip_data.parquet")
-
-  if (nrow(result) > 0) {
-    arrow::write_parquet(result, output_file)
-    message(sprintf("Data saved in file: %s (%d lines)",
-                    output_file, nrow(result)))
-  } else {
-    warning("Result is empty, file is not saved")
-  }
-
-  return(invisible(result))
+  return(result)
 }
