@@ -24,14 +24,20 @@ data <- dbipAnalyzer:::load_processed_data(data_path)
 ```
 ### Статистика
 ```{r}
+print(data_path)
+print(data)
+```
+```{r}
 #| echo: false
 stats <-  invisible(dbipAnalyzer:::get_data_stats(data))
 map_data <- head(data, 100000)  
+data("demo", package = "dbipAnalyzer")
+print(data)
 ip_map <- dbipAnalyzer:::create_ip_map(map_data, 100000)
 as_chart <- dbipAnalyzer:::create_as_org_chart(data, top_n = 15)
 data_table <- dbipAnalyzer:::create_table(data, n = 200)
 ```
-### Карта распределения IP - адресов (для первых 100000)
+### Карта распределения IP - адресов (для первых 10)
 ```{r}
 #| echo: false
 ip_map
@@ -46,3 +52,4 @@ print(as_chart)
 #| echo: false
 data_table
 ```
+

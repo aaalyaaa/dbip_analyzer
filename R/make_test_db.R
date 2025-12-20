@@ -15,25 +15,28 @@ make_test_dashboard <- function() {
 
   message("Создание демо-дашборда...")
 
-  # 2. Копируем ВСЕ файлы из inst/quarto, сохраняя структуру
+  # 2. Копируем ВСЕ файлы из inst/quarto
   quarto_dir <- system.file("quarto", package = "dbipAnalyzer")
 
-  # Копируем всю папку quarto целиком
-  file.copy(quarto_dir, test_docs_dir, recursive = TRUE)
-
-  # Переименовываем скопированную папку в корневую структуру
-  copied_quarto_dir <- file.path(test_docs_dir, "quarto")
-  if (dir.exists(copied_quarto_dir)) {
-    # Перемещаем все файлы из quarto/ в корень test_docs
-    quarto_files <- list.files(copied_quarto_dir, full.names = TRUE)
-    for (file in quarto_files) {
-      file.copy(file, test_docs_dir, recursive = TRUE)
-    }
-    # Удаляем временную папку
-    unlink(copied_quarto_dir, recursive = TRUE)
+  # Проверяем, что папка существует
+  if (quarto_dir == "") {
+    stop("Не найдена папка quarto в пакете")
   }
 
-  cat("Файлы в test_docs:", paste(list.files(test_docs_dir), collapse = ", "), "\n")
+  # Выводим список файлов в quarto папке
+  cat("Файлы в quarto папке пакета:\n")
+  print(list.files(quarto_dir, full.names = TRUE))
+
+  # Копируем все файлы из quarto_dir в test_docs_dir
+  file.copy(
+    list.files(quarto_dir, full.names = TRUE, include.dirs = TRUE),
+    test_docs_dir,
+    recursive = TRUE
+  )
+
+  # Выводим список скопированных файлов
+  cat("\nФайлы в test_docs после копирования:\n")
+  print(list.files(test_docs_dir, full.names = FALSE, recursive = FALSE))
 
   # 3. Загружаем демо данные
   data("demo", package = "dbipAnalyzer")
@@ -42,41 +45,69 @@ make_test_dashboard <- function() {
   processed_dir <- file.path(test_docs_dir, "processed")
   dir.create(processed_dir, recursive = TRUE, showWarnings = FALSE)
 
-  # Сохраняем данные как dbip_data.parquet (как ожидает index.qmd)
+  # Сохраняем данные
   arrow::write_parquet(demo, file.path(processed_dir, "dbip_data.parquet"))
 
-  # 5. Создаем index.qmd специально для демо-дашборда
-  # Просто используем исходный index.qmd, так как он уже настроен на
-  # загрузку данных из processed/dbip_data.parquet
-  index_path <- file.path(test_docs_dir, "index.qmd")
-
-  # Удаляем index1.qmd, он не нужен
+  # 5. Проверяем, существует ли index1.qmd
   index1_path <- file.path(test_docs_dir, "index1.qmd")
-  if (file.exists(index1_path)) {
-    file.remove(index1_path)
+  cat("\nПроверяем index1.qmd:\n")
+  cat("Существует?", file.exists(index1_path), "\n")
+  cat("Путь:", normalizePath(index1_path, mustWork = FALSE), "\n")
+
+  if (!file.exists(index1_path)) {
+    cat("\nФайл index1.qmd не найден! Доступные файлы:\n")
+    print(list.files(test_docs_dir, pattern = "\\.qmd$", full.names = TRUE))
+
+    # Если нет index1.qmd, используем index.qmd
+    if (file.exists(file.path(test_docs_dir, "index.qmd"))) {
+      cat("Использую index.qmd вместо index1.qmd\n")
+      index1_path <- file.path(test_docs_dir, "index.qmd")
+    } else {
+      stop("Нет ни index.qmd, ни index1.qmd файлов!")
+    }
   }
+
 
   # 6. Переходим в test_docs и рендерим
   old_wd <- getwd()
   setwd(test_docs_dir)
 
+  cat("\n=== НАЧАЛО РЕНДЕРИНГА ===\n")
   cat("Рабочая директория:", getwd(), "\n")
-  cat("Файлы в директории:", paste(list.files(), collapse = ", "), "\n")
-  cat("Файлы в processed:", paste(list.files("processed"), collapse = ", "), "\n")
+  cat("Файлы в директории:\n")
+  print(list.files())
 
-  # Рендерим index.qmd с использованием _quarto.yml
-  cat("Рендеринг Quarto...\n")
-  quarto::quarto_render(as_job = FALSE, quiet = FALSE)
+  # Проверяем наличие файла перед рендерингом
+  input_file <- ifelse(grepl("index1\\.qmd$", index1_path), "index1.qmd", "index.qmd")
+  cat("Рендерим файл:", input_file, "\n")
+  cat("Файл существует?", file.exists(input_file), "\n")
+
+  # 7. Пробуем рендерить
+  tryCatch({
+    quarto::quarto_render(
+      input = input_file,
+      as_job = FALSE,
+      quiet = FALSE
+    )
+    cat("\nРендеринг завершен успешно!\n")
+  }, error = function(e) {
+    cat("\nОШИБКА при рендеринге:\n")
+    cat(e$message, "\n")
+
+    # Попробуем альтернативный способ
+    cat("\nПробую альтернативный способ рендеринга...\n")
+    system(paste("quarto render", input_file))
+  })
 
   setwd(old_wd)
 
-  # 7. Ищем созданный HTML файл
-  # Ищем в стандартной папке docs (как указано в _quarto.yml)
-  html_path <- file.path(test_docs_dir, "docs", "index.html")
+  # 8. Ищем созданный HTML файл
+  # Сначала ищем в docs/
+  html_path <- file.path(test_docs_dir, "docs", paste0(tools::file_path_sans_ext(input_file), ".html"))
 
   if (!file.exists(html_path)) {
-    # Если нет, ищем в корне
-    html_path <- file.path(test_docs_dir, "index.html")
+    # Ищем в корне
+    html_path <- file.path(test_docs_dir, paste0(tools::file_path_sans_ext(input_file), ".html"))
   }
 
   if (!file.exists(html_path)) {
@@ -85,68 +116,23 @@ make_test_dashboard <- function() {
                              recursive = TRUE, full.names = TRUE)
     if (length(html_files) > 0) {
       html_path <- html_files[1]
+      cat("Найден HTML файл:", html_path, "\n")
     } else {
-      stop("HTML файл не создан")
+      stop("HTML файл не создан.")
     }
   }
 
-  # 8. Переименовываем в test_index.html
+  # 9. Переименовываем в test_index.html
   final_html <- file.path(test_docs_dir, "test_index.html")
-
-  # Копируем HTML файл
   file.copy(html_path, final_html, overwrite = TRUE)
+  cat("\nФайл сохранен как:", final_html, "\n")
 
-  # 9. Обрабатываем папку с ресурсами
-  # Ищем папку ресурсов
-  resource_dirs <- list.dirs(test_docs_dir, recursive = FALSE, full.names = TRUE)
-  resource_dirs <- resource_dirs[grepl("(index|index1)_files$", resource_dirs)]
-
-  if (length(resource_dirs) > 0) {
-    # Переименовываем первую найденную папку
-    old_res_dir <- resource_dirs[1]
-    new_res_dir <- file.path(test_docs_dir, "test_index_files")
-
-    if (!dir.exists(new_res_dir)) {
-      file.rename(old_res_dir, new_res_dir)
-      cat("Переименована папка ресурсов: ", basename(old_res_dir), " -> test_index_files\n")
-    }
-
-    # Обновляем ссылки в HTML
-    if (file.exists(final_html)) {
-      html_content <- readLines(final_html, warn = FALSE)
-      # Заменяем старые ссылки на новые
-      html_content <- gsub('(index|index1)_files/', 'test_index_files/', html_content)
-      writeLines(html_content, final_html)
-    }
-  }
-
-  # 10. Очищаем временные файлы, но оставляем важные
-  files_to_keep <- c(
-    "test_index.html",
-    "test_index_files",
-    "quarto.css"
-  )
-
-  all_files <- list.files(test_docs_dir, full.names = FALSE)
-  files_to_remove <- setdiff(all_files, files_to_keep)
-
-  for (file in files_to_remove) {
-    path <- file.path(test_docs_dir, file)
-    if (file.exists(path)) {
-      if (file.info(path)$isdir) {
-        unlink(path, recursive = TRUE)
-      } else {
-        file.remove(path)
-      }
-    }
-  }
-
-  # 11. Результат
+  # 10. Результат
   message("\n✅ Демо-дашборд успешно создан!")
-  message("📁 Файл: ", final_html)
-  message("📊 Использованы данные: demo (", nrow(demo), " строк)")
+  message("📁 Файл: ", normalizePath(final_html))
 
   if (interactive() && file.exists(final_html)) {
+    message("📋 Открываю в браузере...")
     utils::browseURL(final_html)
   }
 
