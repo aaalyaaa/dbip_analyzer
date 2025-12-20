@@ -1,0 +1,30 @@
+# R files
+.Rhistory
+.RData
+.Rproj.user
+*.Rproj
+
+# Data directories
+data-raw/
+processed/
+docs/
+
+# Build artifacts
+*.tar.gz
+*.pdf
+*.Rcheck/
+
+# Quarto cache
+.quarto/
+*/.quarto/
+
+# Git
+.git/
+.gitignore
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Docker compose override
+docker-compose.override.yml

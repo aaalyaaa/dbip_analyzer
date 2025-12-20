@@ -22,5 +22,7 @@ Imports:
     leaflet,
     ggplot2,
     DT,
-    arrow
+    arrow,
+    httpuv,
+    quarto
 RoxygenNote: 7.3.3
