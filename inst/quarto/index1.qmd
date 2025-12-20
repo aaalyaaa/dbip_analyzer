@@ -6,14 +6,19 @@ format: html
 ```{r}
 #| echo: false
 rda_path <- system.file("data", "demo.rda", package = "dbipAnalyzer")
+
+data_path <- file.path("data", "demo.parquet")
+
+if (!dir.exists("data")) {
+  dir.create("data", recursive = TRUE)
+}
 env <- new.env()
 load(rda_path, envir = env)
 data_name <- ls(env)[1]
 demo_data <- get(data_name, envir = env)
-if (!file.exists(data_path)) {
-  arrow::write_parquet(demo_data, data_path)
-  message("Создан файл: ", data_path)} 
-data_path <- file.path(dirname(rda_path), "demo.parquet")
+
+arrow::write_parquet(demo_data, data_path)
+
 data <- dbipAnalyzer:::load_processed_data(data_path)
 ```
 ### Статистика
