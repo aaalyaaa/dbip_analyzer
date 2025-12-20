@@ -1,0 +1,42 @@
+---
+title: "DB-IP Data Visualization"
+format: html
+---
+
+```{r}
+#| echo: false
+rda_path <- system.file("data", "demo.rda", package = "dbipAnalyzer")
+env <- new.env()
+load(rda_path, envir = env)
+data_name <- ls(env)[1]
+demo_data <- get(data_name, envir = env)
+if (!file.exists(data_path)) {
+  arrow::write_parquet(demo_data, data_path)
+  message("Создан файл: ", data_path)} 
+data_path <- file.path(dirname(rda_path), "demo.parquet")
+data <- dbipAnalyzer:::load_processed_data(data_path)
+```
+### Статистика
+```{r}
+#| echo: false
+stats <-  invisible(dbipAnalyzer:::get_data_stats(data))
+map_data <- head(data, 100000)  
+ip_map <- dbipAnalyzer:::create_ip_map(map_data, 100000)
+as_chart <- dbipAnalyzer:::create_as_org_chart(data, top_n = 15)
+data_table <- dbipAnalyzer:::create_table(data, n = 200)
+```
+### Карта распределения IP - адресов (для первых 100000)
+```{r}
+#| echo: false
+ip_map
+```
+### AS организаций по количеству IP-диапазонов
+```{r}
+#| echo: false
+print(as_chart)
+```
+### Таблица данных DB-IP
+```{r}
+#| echo: false
+data_table
+```

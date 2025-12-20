@@ -33,7 +33,7 @@ make_dashboard <- function() {
 
   cat("Запускаем рендеринг Quarto\n")
 
-  quarto::quarto_render(".", as_job = FALSE, quiet = FALSE)
+  quarto::quarto_render("index.qmd", as_job = FALSE, quiet = FALSE)
 
   setwd(old_wd)
 
@@ -42,10 +42,16 @@ make_dashboard <- function() {
   if (!file.exists(created_html)) {
     Sys.sleep(2)
     if (!file.exists(created_html)) {
-      all_html_files <- list.files(temp_dir, pattern = "\\.html$",
-                                   recursive = TRUE, full.names = TRUE)
+      all_html_files <- list.files(temp_dir, pattern = "index\\.html$",
+                                   recursive = TRUE, full.names = TRUE,
+                                   ignore.case = TRUE)
       if (length(all_html_files) == 0) {
-        stop("HTML файл не был создан. Проверьте логи Quarto.")
+        all_html_files <- list.files(temp_dir, pattern = "index1.*\\.html$",
+                                     recursive = TRUE, full.names = TRUE,
+                                     ignore.case = TRUE)
+      }
+      if (length(all_html_files) == 0) {
+        stop("HTML файл index.html не был создан. Проверьте логи Quarto.")
       } else {
         created_html <- all_html_files[1]
       }
@@ -60,7 +66,6 @@ make_dashboard <- function() {
   temp_docs_dir <- file.path(temp_quarto, "docs")
 
   if (dir.exists(temp_docs_dir)) {
-
     all_files <- list.files(temp_docs_dir,
                             full.names = TRUE,
                             recursive = TRUE,
@@ -80,20 +85,13 @@ make_dashboard <- function() {
     }
   }
 
-
   target_path <- file.path(user_docs_dir, "index.html")
 
   if (file.exists(target_path)) {
     file_size <- file.info(target_path)$size
     cat("\nДашборд успешно создан и находится в файле docs/index.html \n")
 
-#    if (interactive()) {
-#      utils::browseURL(target_path)
-#    }
-  } else {
-    stop("Не удалось создать dashboard")
-  }
 
   invisible(target_path)
-}
+  }}
 
