@@ -32,7 +32,7 @@ make_demo_dashboard <- function() {
   dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
   dir.create(processed_dir, recursive = TRUE, showWarnings = FALSE)
 
-  # Сохраняем данные в оба места (для совместимости с index1.qmd)
+  # Сохраняем данные в оба места
   arrow::write_parquet(demo, file.path(data_dir, "demo.parquet"))
   arrow::write_parquet(demo, file.path(processed_dir, "dbip_data.parquet"))
 
@@ -47,59 +47,119 @@ make_demo_dashboard <- function() {
 
   setwd(old_wd)
 
-  # 4. Ищем созданный HTML файл
-  html_candidates <- c(
-    file.path(temp_quarto, "index1.html"),
-    file.path(temp_quarto, "docs", "index1.html"),
-    file.path(temp_quarto, "docs", "index.html"),
-    file.path(temp_quarto, "index.html")
+  # 4. Создаем папку test_docs
+  test_docs_dir <- file.path(getwd(), "test_docs")
+  if (!dir.exists(test_docs_dir)) {
+    dir.create(test_docs_dir, recursive = TRUE)
+  } else {
+    # Очищаем существующую папку
+    unlink(test_docs_dir, recursive = TRUE)
+    dir.create(test_docs_dir, recursive = TRUE)
+  }
+
+  # 5. Копируем и переименовываем все созданные файлы с префиксом test_
+
+  # Ищем папку с результатами (обычно docs/ или корень)
+  result_dirs <- c(
+    file.path(temp_quarto, "docs"),
+    temp_quarto
   )
 
-  html_source <- NULL
-  for (candidate in html_candidates) {
-    if (file.exists(candidate)) {
-      html_source <- candidate
+  result_dir <- NULL
+  for (dir in result_dirs) {
+    if (dir.exists(dir) && length(list.files(dir)) > 0) {
+      result_dir <- dir
       break
     }
   }
 
-  if (is.null(html_source)) {
-    # Ищем любой HTML файл
-    all_html <- list.files(temp_quarto, pattern = "\\.html$",
-                           recursive = TRUE, full.names = TRUE)
-    if (length(all_html) > 0) {
-      html_source <- all_html[1]
-    } else {
-      stop("Не удалось создать HTML файл")
+  if (is.null(result_dir)) {
+    stop("Не удалось найти сгенерированные файлы")
+  }
+
+  cat("Копируем файлы с префиксом test_...\n")
+
+  # Функция для копирования с переименованием
+  copy_with_prefix <- function(from_dir, to_dir, prefix = "test_") {
+    all_files <- list.files(from_dir,
+                            full.names = TRUE,
+                            recursive = TRUE,
+                            all.files = TRUE,
+                            no.. = TRUE)
+
+    for (file in all_files) {
+      # Получаем относительный путь
+      rel_path <- substr(file, nchar(from_dir) + 2, nchar(file))
+
+      # Разделяем путь на части
+      path_parts <- unlist(strsplit(rel_path, "/"))
+
+      # Добавляем префикс к имени файла (но не к папкам)
+      if (length(path_parts) > 0) {
+        # Только к последней части (файлу)
+        if (!grepl("\\.", path_parts[length(path_parts)])) {
+          # Если это папка (без расширения), оставляем как есть
+          new_name <- path_parts
+        } else {
+          # Если это файл, добавляем префикс
+          path_parts[length(path_parts)] <- paste0(prefix,
+                                                   path_parts[length(path_parts)])
+          new_name <- path_parts
+        }
+
+        new_rel_path <- paste(new_name, collapse = "/")
+        target_file <- file.path(to_dir, new_rel_path)
+
+        # Создаем директорию если нужно
+        target_dir <- dirname(target_file)
+        if (!dir.exists(target_dir)) {
+          dir.create(target_dir, recursive = TRUE, showWarnings = FALSE)
+        }
+
+        # Копируем файл
+        file.copy(file, target_file, overwrite = TRUE)
+      }
     }
   }
 
-  # 5. Копируем HTML в удобное место для пользователя
-  output_dir <- file.path(getwd(), "docs")
-  if (!dir.exists(output_dir)) {
-    dir.create(output_dir, recursive = TRUE)
-  }
-
-  final_html <- file.path(output_dir, "demo_dashboard.html")
-  file.copy(html_source, final_html, overwrite = TRUE)
+  # Копируем все файлы
+  copy_with_prefix(result_dir, test_docs_dir, "test_")
 
   # 6. Очищаем временные файлы
   unlink(temp_dir, recursive = TRUE)
 
-  # 7. Информируем пользователя
-  cat("\n" + stringr::str_dup("=", 50) + "\n")
+  # 7. Показываем пользователю что получилось
   cat("✅ ДЕМО-ДАШБОРД УСПЕШНО СОЗДАН!\n")
-  cat("\n📁 Файл:", final_html, "\n")
-  cat("📊 Размер:", round(file.info(final_html)$size / 1024, 1), "KB\n")
-  cat("\n" + stringr::str_dup("=", 50) + "\n")
+  cat("\n📁 Папка: test_docs/\n")
+  cat("📋 Созданные файлы:\n")
 
-  # 8. Автоматически открываем в браузере
-  if (interactive()) {
-    cat("\nОткрываю в браузере...\n")
-    Sys.sleep(1)
-    utils::browseURL(final_html)
+  # Показываем структуру файлов
+  files_in_test_docs <- list.files(test_docs_dir, recursive = TRUE)
+  for (file in files_in_test_docs) {
+    cat("  - ", file, "\n")
   }
 
-  invisible(final_html)
-}
+  # Основной HTML файл
+  main_html <- file.path(test_docs_dir, "test_index.html")
 
+  if (!file.exists(main_html)) {
+    # Ищем любой HTML файл с префиксом test_
+    html_files <- list.files(test_docs_dir, pattern = "^test_.*\\.html$",
+                             recursive = TRUE, full.names = TRUE)
+    if (length(html_files) > 0) {
+      main_html <- html_files[1]
+    }
+  }
+
+  cat("\n📊 Основной файл:", basename(main_html), "\n")
+  cat("📍 Полный путь:", main_html, "\n")
+
+  # 8. Автоматически открываем в браузере
+  if (interactive() && file.exists(main_html)) {
+    cat("\nОткрываю в браузере...\n")
+    Sys.sleep(1)
+    utils::browseURL(main_html)
+  }
+
+  invisible(main_html)
+}
