@@ -4,35 +4,59 @@ format: html
 ---
 
 ```{r}
-# Ищем demo.rda в текущей директории (он будет скопирован туда make_dashboard)
+# Проверяем наличие demo.rda
 rda_path <- "data/demo.rda"
 
-# Проверяем, что файл существует
 if (!file.exists(rda_path)) {
-  stop("Файл data/demo.rda не найден. Убедитесь, что make_dashboard() скопировала файл.")
+  # Пробуем другие возможные пути
+  alternative_paths <- c(
+    "../data/demo.rda",
+    "./demo.rda",
+    "demo.rda"
+  )
+  
+  for (path in alternative_paths) {
+    if (file.exists(path)) {
+      rda_path <- path
+      cat("Найден demo.rda по альтернативному пути:", path, "\n")
+      break
+    }
+  }
 }
 
-# Загружаем данные из demo.rda
-env <- new.env()
-load(rda_path, envir = env)
-data_name <- ls(env)[1]
-demo_data <- get(data_name, envir = env)
-
-cat("Загружены демо данные '", data_name, "'\n")
-cat("Размер данных:", nrow(demo_data), "x", ncol(demo_data), "\n")
+if (!file.exists(rda_path)) {
+  # Если файл не найден, создаем демо данные на лету
+  cat("Файл demo.rda не найден, создаем демо данные...\n")
+  
+  demo_data <- data.frame(
+    date = seq.Date(from = as.Date("2024-01-01"), 
+                    to = as.Date("2024-03-31"), 
+                    by = "day"),
+    ip_address = replicate(90, paste0(sample(0:255, 4, TRUE), collapse = ".")),
+    country = sample(c("RU", "US", "DE", "CN"), 90, replace = TRUE),
+    requests = round(rnorm(90, mean = 1000, sd = 200)),
+    response_time = round(runif(90, 50, 500), 2)
+  )
+  
+  cat("Созданы демо данных размером:", nrow(demo_data), "x", ncol(demo_data), "\n")
+} else {
+  # Загружаем данные из demo.rda
+  cat("Загружаем данные из:", rda_path, "\n")
+  env <- new.env()
+  load(rda_path, envir = env)
+  data_name <- ls(env)[1]
+  demo_data <- get(data_name, envir = env)
+  
+  cat("Загружены демо данные '", data_name, "' размером: ", 
+      nrow(demo_data), "x", ncol(demo_data), "\n")
+}
 
 # Сохраняем как parquet
 data_path <- file.path("data", "demo.parquet")
-
-# Создаем папку data если ее нет (на всякий случай)
-if (!dir.exists("data")) {
-  dir.create("data", recursive = TRUE)
-}
-
+if (!dir.exists("data")) dir.create("data", recursive = TRUE)
 arrow::write_parquet(demo_data, data_path)
-cat("Создан файл:", data_path, "\n")
 
-# Загружаем данные для использования в дашборде
+# Загружаем для использования
 data <- arrow::read_parquet(data_path)
 
 data <- dbipAnalyzer:::load_processed_data(data_path)
