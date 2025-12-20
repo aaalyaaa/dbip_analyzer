@@ -1,0 +1,33 @@
+#' DB-IP Demo Dataset
+#'
+#' A sample dataset containing 100,000 records from the DB-IP database.
+#' Includes first record for each unique Autonomous System Number (ASN)
+#' and additional second records to reach 100,000 total records.
+#'
+#' @format A data.table with 100,000 rows and 10 variables:
+#' \describe{
+#'   \item{ip_start}{Starting IP address (character)}
+#'   \item{ip_end}{Ending IP address (character)}
+#'   \item{continent}{Continent code (character)}
+#'   \item{country}{Country code (character)}
+#'   \item{state}{State or region (character)}
+#'   \item{city}{City name (character)}
+#'   \item{latitude}{Latitude coordinate (numeric)}
+#'   \item{longitude}{Longitude coordinate (numeric)}
+#'   \item{as_number}{Autonomous System Number (character)}
+#'   \item{as_organization}{AS Organization name (character)}
+#' }
+#' @source Processed from DB-IP Lite database (\url{https://db-ip.com/})
+#' @examples
+#' # Load the package
+#' library(dbipAnalyzer)
+#'
+#' # The dataset is automatically available
+#' head(demo)
+#'
+#' # Check the size
+#' nrow(demo)
+#'
+#' # Count unique ASN
+#' length(unique(demo$as_number))
+"demo"
